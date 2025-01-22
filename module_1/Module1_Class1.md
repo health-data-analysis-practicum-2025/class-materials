@@ -1,7 +1,7 @@
 ---
 title: "Class 1-1: Course Introduction"
 author: "Health Data Analysis Practicum (AS.280.347)"
-date: "January 23, 2025"
+date: "January 22, 2025"
 output: 
   html_document:
     toc: true
@@ -27,17 +27,17 @@ output:
 **Computation:** Statistical software R
 
 * Have your laptop available for each course meeting
-* We will work with R through the Posit Cloud interface ([https://posit.cloud/](https://posit.cloud/))
+* We will work with R through the Posit Cloud interface ([https://posit.cloud/](https://posit.cloud/){target="_blank"})
 * You will create all of your assignments using R Markdown
 * You are encouraged to complete online tutorials on using R through Posit Cloud ("Learn" --> "Primers" in the left-hand menu) - no longer exists -- use Swirl instead!
-* Another great resource for learning R is the online book "R for Data Science", which you can access for free at [https://r4ds.had.co.nz/](https://r4ds.had.co.nz/) and  [https://r4ds.hadley.nz/](https://r4ds.hadley.nz/) (second edition).
+* Another great resource for learning R is the online book "R for Data Science", which you can access for free at [https://r4ds.had.co.nz/](https://r4ds.had.co.nz/){target="_blank"} and  [https://r4ds.hadley.nz/](https://r4ds.hadley.nz/){target="_blank"} (second edition).
 
 **Version control/collaboration**: GitHub
 
 * GitHub is an online compendium of file repositories where people can share their work, work collaboratively with others, and easily use a version control system to track development of software and projects
-* We will share course materials and assignments through Github
+* We will share course materials and assignments through GitHub
 * You will turn in your work through GitHub
-* We will give comments on your work through Github
+* We will give comments on your work through GitHub
 
 **Class structure:**
 
@@ -58,6 +58,30 @@ output:
 
 **Syllabus:** You should read the entire syllabus and let us know if you have any questions or concerns.
 
+
+## Overview of objectives for today:
+
+1. Submission process for assignment-0-1 to make sure everyone can turn in their work
+2. Review of class materials from Monday
+3. New materials on considering "otherwise similar" individuals in our question of interest
+4. Discussion of assignment-1-1 and time to start on it
+
+## Submitting assignments through GitHub and the RStudio interface
+
+When you are ready to submit your assignment, do ALL of the following:
+
+* First, knit your .Rmd file to see if it will compile.  If it doesn't knit, you can still follow the steps below to submit your assignment, but please try to resolve the knitting issues before you submit.  You can reach out to use at phbiostats@jhu.edu for help!
+* Next you need to **commit** the changes you've made to the document.  Click the colorful Git button at the top of the RStudio window and select "Commit" from the menu.
+* In the window that opens, **stage** your changes by clicking the check box next to the `Asst0-1.Rmd` file.
+* In the "Commit message" box, type a short description of what changes you've made, something like: `Completed assignment`
+* Click the "Commit" button on the bottom right.
+* You'll see a window that will tell you about the changes that you've made.  Click "Close" to close the window.  You've successfully committed! You can close this commit window now.
+* After committing, you must **push** your changes to the repository on Github.  Do this by clicking the colorful Git button again and select "Push Branch".  
+* Again, you'll see a window open that tells you your changes have been pushed!
+* If you want, you can look at your repository on [Github.com](https://github.com/) and should be able to see your changes there!  
+* You've successfully submitted your assignment :)
+
+
 ## Module 1: Smoking and the risk of disease
 
 
@@ -67,7 +91,7 @@ What is the risk of smoking-caused disease, like lung cancer (LC) and coronary h
 
 * *Question 1.1:* How does the risk of disease compare for smokers and otherwise similar non-smokers?
 
-* *Queston 1.2:* Does the contribution of smoking to the risk of disease vary by sex or socio-economic status (SES)?
+* *Question 1.2:* Does the contribution of smoking to the risk of disease vary by sex or socio-economic status (SES)?
 
 **To address each question we want to construct:**
 
@@ -76,11 +100,21 @@ What is the risk of smoking-caused disease, like lung cancer (LC) and coronary h
 
 We will answer these questions using data from the National Medical Expenditures Survey (NMES).
 
+
+## Overall data analysis philosophy
+
+We follow the overall data analysis philosophy outlined in the R for Data Science book mentioned in the course syllabus (available for free online [here](https://r4ds.hadley.nz/). Here's a visual representation of this philosophy from the book:
+
+![](whole-game.png)
+
+
+I strongly encourage those who are just starting out with learning R to review the "Whole game" section of this online book. There are lots of amazing tips and tricks to help get you started on the right path.
+
 ## NMES data
 
 Let's take a look at the NMES data.  This data is stored in the file `nmesUNPROC.csv` in the same `module_1` folder that includes this .Rmd file.
 
-We will read the data into R using the `read_csv()` function from the `readr` package.  This `readr` package is part of a core group of packages called the `tidyverse`.  In order to use a package in R, you must first install the package (once) and then load the package (each time you are in a new session of R).  We will often be working with the tidyverse packages in the course, so we have already installed these packages in our shared RStudio cloud workspace.  We still need to load these packages each time we are going to use them in an R session.  We can load all of the core tidyverse packages at once like this:
+We will read the data into R using the `read_csv()` function from the `readr` package.  This `readr` package is part of a core group of packages called the `tidyverse`.  In order to use a package in R, you must first install the package (once) and then load the package (each time you are in a new session of R).  We will often be working with the tidyverse packages in the course, so we have already installed these packages in the default template that is used whenever a new project is created in our shared Posit Cloud workspace.  We still need to load these packages each time we are going to use them in an R session.  We can load all of the core tidyverse packages at once like this:
 
 ``` r
 library(tidyverse)
@@ -102,7 +136,7 @@ library(tidyverse)
 Now we can read the data into R:
 
 ``` r
-nmes_data <- read_csv("nmesUNPROC.csv")
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
 ```
 
 ```
@@ -115,7 +149,7 @@ nmes_data <- read_csv("nmesUNPROC.csv")
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
-Since the the default working directory (where R looks for files) is the project directory, we need to tell R where to find this data file.  In the path above, you can see that we tell R to look in the `module_1` folder and then give it the file name.
+Since the the default *working directory* (where R looks for files) is the project directory, we need to tell R where to find this data file.  In the *path* above, you can see that we tell R to look in the `module_1` folder and then give it the file name.
 
 Let's get an idea of the variables in this NMES dataset.  Here is a codebook for these variables:
 
@@ -221,6 +255,13 @@ names(nmes_data)
 ## [13] "marital"   "poor"      "age"       "female"
 ```
 
+
+* We can also open a version of the data by using the View function or clicking on the object in the Environment tab:
+
+``` r
+View(nmes_data)
+```
+
 ## Question 1.1: How does the risk of disease compare for smokers and otherwise similar non-smokers?
 
 To answer this question, we might start by making some displays of our data. 
@@ -237,7 +278,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = eversmk))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barsmk-1.png)<!-- -->
 
 
 ``` r
@@ -253,7 +294,7 @@ ggplot(data = nmes_data) +
 ## generated.
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barsmkprop-1.png)<!-- -->
 
 
 ``` r
@@ -261,7 +302,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barlc5-1.png)<!-- -->
 
 
 ``` r
@@ -269,17 +310,23 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5, y = stat(prop)))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barlc5prop-1.png)<!-- -->
 
-It might be helpful if we re-code the values of 0 and 1 to have more meaningful labels.  We can do this by turning these two numeric variables into factor variables with meaningful labels:
+It might be helpful if we *re-code* the values of 0 and 1 to have more meaningful labels.  We can do this by turning these two *numeric* variables into *factor* variables with meaningful labels:
 
 
 ``` r
 nmes_data <- nmes_data %>%
-  mutate(eversmk = factor(eversmk, levels = c("0", "1"), labels = c("Never smoker", "Ever smoker")),
-         lc5 = factor(lc5, levels = c("0", "1"), labels = c("No LC", "LC"))
+  mutate(eversmk = factor(eversmk, 
+                          levels = c("0", "1"), 
+                          labels = c("Never smoker", "Ever smoker")),
+         lc5 = factor(lc5, 
+                      levels = c("0", "1"), 
+                      labels = c("No LC", "LC"))
          )
 ```
+
+**Question:** What is the `<-` doing in the code above? Why is this helpful for what we are trying to do with the `mutate` function?
 
 Let's look at one of our proportion plots again:
 
@@ -288,7 +335,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = eversmk, y = stat(prop)))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barsmkprop2-1.png)<!-- -->
 
 Both of the proportions are 1?!  This is because now that our variable is a factor variable, we also have to specify which groups we want to calculate the proportions relative to. If we want the proportions overall, we use `group = 1`:
 
@@ -297,7 +344,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = eversmk, y = stat(prop), group = 1))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barsmkprop3-1.png)<!-- -->
 
 
 ``` r
@@ -305,7 +352,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5, y = stat(prop), group = 1))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barlc5prop2-1.png)<!-- -->
 
 We've made these plots look nicer, but are they helping us to answer our question? How can we include both variables together in the same graph?  We can do this by mapping the second variable to `fill` in our graph:
 
@@ -315,7 +362,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5, fill = eversmk))
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barlc5smk-1.png)<!-- -->
 
 We can make this look even nicer by adjusting the position of the bars.  We can place them next to each other with `position = "dodge"`:
 
@@ -325,14 +372,14 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5, y = stat(prop), fill = eversmk), position = "dodge")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barposdodge-1.png)<!-- -->
 
 ``` r
 ggplot(data = nmes_data) + 
   geom_bar(mapping = aes(x = lc5, y = stat(prop), group = eversmk, fill = eversmk), position = "dodge")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-16-2.png)<!-- -->
+![](Module1_Class1_files/figure-html/barposdodge-2.png)<!-- -->
 
 Or we can stack them as proportions with `position = "fill"`:
 
@@ -342,7 +389,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = lc5, fill = eversmk), position = "fill")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barposfill-1.png)<!-- -->
 
 Now we have the graphs with both the `lc5` and `eversmk` variables.  Can we now compare the risk of disease between smokers and non-smokers?
 
@@ -353,7 +400,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = eversmk, fill = lc5), position = "fill")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barsmklc5-1.png)<!-- -->
 
 Now, how would you say that this risk of disease compares for smokers and non-smokers?
 
@@ -419,7 +466,7 @@ nmes_data %>%
 
 Do these tables help us compare the risk of disease for smokers and non-smokers?
 
-To get proportions instead of counts, we can mutate our table to add a proportions column, defined as the value in the `n` column divided by the sum of the values in the `n` column.  Basically we are specifying a new column `prop = n/sum(n)`:
+To get proportions instead of counts, we can *mutate* our table to add a proportions column, defined as the value in the `n` column divided by the sum of the values in the `n` column.  Basically we are specifying a new column `prop = n/sum(n)`:
 
 ``` r
 nmes_data %>%
@@ -539,43 +586,117 @@ nmes_data %>%
 
 Which one of these is the one we want if our goal is to compare the risk of disease between smokers and non-smokers?
 
+We just saw that to calculate the *conditional* probability that we are interested in, we really want a table where the proportions add up to 1 within the smoking groups, not across all four of the groups.  We can do this by using the `group_by()` option.  If we group by `lc5`, then our proportions add up to 1 within the LC groups.  If we group by `eversmk`, then our proportions add up to 1 within the smoking groups
+
 Note: we can make our tables prettier by using the `kable()` function from the `knitr` package.  Again we have already installed the `knitr` package in our shared workspace, so we only have to load it before we can use it:
 
 ``` r
 library(knitr)
-
-nmes_data %>%
-  count(lc5, eversmk) %>%
-  group_by(eversmk) %>%
-  mutate(prop = n/sum(n)) %>%
-  kable()
+library(kableExtra)
 ```
 
+```
+## 
+## Attaching package: 'kableExtra'
+```
 
-
-|lc5   |eversmk      |    n|      prop|
-|:-----|:------------|----:|---------:|
-|No LC |Never smoker | 2080| 0.9980806|
-|No LC |Ever smoker  | 1953| 0.9794383|
-|LC    |Never smoker |    4| 0.0019194|
-|LC    |Ever smoker  |   41| 0.0205617|
+```
+## The following object is masked from 'package:dplyr':
+## 
+##     group_rows
+```
 
 ``` r
 nmes_data %>%
   count(lc5, eversmk) %>%
   group_by(eversmk) %>%
   mutate(prop = n/sum(n)) %>%
-  kable(digits = 3)
+  kable() %>%
+  kable_styling()
 ```
 
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> lc5 </th>
+   <th style="text-align:left;"> eversmk </th>
+   <th style="text-align:right;"> n </th>
+   <th style="text-align:right;"> prop </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> No LC </td>
+   <td style="text-align:left;"> Never smoker </td>
+   <td style="text-align:right;"> 2080 </td>
+   <td style="text-align:right;"> 0.9980806 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> No LC </td>
+   <td style="text-align:left;"> Ever smoker </td>
+   <td style="text-align:right;"> 1953 </td>
+   <td style="text-align:right;"> 0.9794383 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> LC </td>
+   <td style="text-align:left;"> Never smoker </td>
+   <td style="text-align:right;"> 4 </td>
+   <td style="text-align:right;"> 0.0019194 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> LC </td>
+   <td style="text-align:left;"> Ever smoker </td>
+   <td style="text-align:right;"> 41 </td>
+   <td style="text-align:right;"> 0.0205617 </td>
+  </tr>
+</tbody>
+</table>
 
+``` r
+nmes_data %>%
+  count(lc5, eversmk) %>%
+  group_by(eversmk) %>%
+  mutate(prop = n/sum(n)) %>%
+  kable(digits = 3) %>%
+  kable_styling()
+```
 
-|lc5   |eversmk      |    n|  prop|
-|:-----|:------------|----:|-----:|
-|No LC |Never smoker | 2080| 0.998|
-|No LC |Ever smoker  | 1953| 0.979|
-|LC    |Never smoker |    4| 0.002|
-|LC    |Ever smoker  |   41| 0.021|
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> lc5 </th>
+   <th style="text-align:left;"> eversmk </th>
+   <th style="text-align:right;"> n </th>
+   <th style="text-align:right;"> prop </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> No LC </td>
+   <td style="text-align:left;"> Never smoker </td>
+   <td style="text-align:right;"> 2080 </td>
+   <td style="text-align:right;"> 0.998 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> No LC </td>
+   <td style="text-align:left;"> Ever smoker </td>
+   <td style="text-align:right;"> 1953 </td>
+   <td style="text-align:right;"> 0.979 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> LC </td>
+   <td style="text-align:left;"> Never smoker </td>
+   <td style="text-align:right;"> 4 </td>
+   <td style="text-align:right;"> 0.002 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> LC </td>
+   <td style="text-align:left;"> Ever smoker </td>
+   <td style="text-align:right;"> 41 </td>
+   <td style="text-align:right;"> 0.021 </td>
+  </tr>
+</tbody>
+</table>
 
 ### Bar graphs from tables
 
@@ -602,7 +723,7 @@ my_table
 ## 4 LC    Ever smoker     41 0.0206
 ```
 
-Now we've created a table that gives the proportion of those with and without lung cancer in each smoking category.  (Note the proportions add up to 1 within the smoking groups!)
+Now we've created a table that gives the proportion of those with and without lung cancer in each smoking category.  (Note the proportions add up to 1 within the smoking groups!) We have saved this table in a new object in our R workspace called `my_table`, which we can use later on in code down below.
 
 We can now graph this by setting the `y` aesthetic to the `prop` variable in this table and choosing `stat = "identity"` within `geom_bar()` to say we are directly giving the `y` value to be plotted rather than having R calculate either the proportion or count for us.
 
@@ -611,7 +732,7 @@ ggplot(data = my_table) +
   geom_bar(aes(x = eversmk, y = prop, fill = lc5), stat = "identity", position = "stack")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barfromtable-1.png)<!-- -->
 
 Confirm that this matches our earlier bar graph using `geom_bar()`:
 
@@ -620,7 +741,7 @@ ggplot(data = nmes_data) +
   geom_bar(mapping = aes(x = eversmk, fill = lc5), position = "fill")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/barcompare-1.png)<!-- -->
 
 Working with a table, we can easily switch from a stacked bar graph to a side-by-side bar graph by changing `position = "stack"` to `position = "dodge"`):
 
@@ -629,12 +750,148 @@ ggplot(data = my_table) +
   geom_bar(aes(x = eversmk, y = prop, fill = lc5), stat = "identity", position = "dodge")
 ```
 
-![](Module1_Class1_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+![](Module1_Class1_files/figure-html/bartable2-1.png)<!-- -->
 
-And there's other flexibility as well, which we will see as the course progresses.  In general, my recommendation for bar graphs is to first create a table with the values you want to graph and **then** create the graph.  This gives you much more control!
+And there's other flexibility as well, which we will see as the course progresses.  In general, my recommendation for bar graphs is to first create a table with the values you want to graph and **then** create the graph.  This gives you much more control and lets you double check that the numbers are what you want to display.
 
 ## Now about the "otherwise similar" part!
 
+(Time permitting...)
+
 We have made some data displays that allow us to compare the risk of disease between smokers and non-smokers.  But we really want to compare the risk of disease between smokers and **otherwise similar** non-smokers.
 
-On Wednesday we will talk about incorporating this "otherwise similar" concept into our graphical displays and spend time working on the first assignment which will be due on Sunday evening.
+What do we mean by this?
+
+Think about it this way -- if our goal is to try to determine whether smoking *causes* disease, we need to think about what we mean by the word "cause."
+
+In Public Health Biostatistics, we used the **counterfactual** definition of a "causal effect" of "treatment":
+
+> A "causal effect" is the difference (or other comparison) between a population characteristic (e.g. mean, risk) having given the treatment to everyone and the same population characteristic absent the treatment
+
+In our case, we have:
+
+* Treatment = smoking
+* Population characteristic = risk of disease
+* We want to compare the risk of disease between two worlds where (1) everyone smokes and (2) no one smokes
+
+If we could observe a world where everyone smokes **and** a world where no one smokes, we would observe the following data:
+
+![](counterfactual_world.png)
+
+If we could observe each person both as a smoker and a non-smoker, we could directly see the effect of smoking on disease, because the only thing different between the two worlds would be whether the person smoked or not.
+
+However, we can't observe each person as both a smoker and a non-smoker, so the data we really observe is this:
+![](actual_world.png)
+
+Here we still observe a difference in disease risk between the smokers and the non-smokers, but we can't be certain that the difference is due to smoking because there may be other differences between the smokers and non-smokers besides smoking status.  Perhaps, for example, most of the non-smokers are female while most of the smokers are male.  Or perhaps the smokers tend to be older than the non-smokers.  There is the potential that other variables could **confound** the relationship between smoking and disease.
+
+> There is **confounding** in the effect of a treatment $Z$ (e.g. smoking) on an outcome variable $Y$ (e.g. disease status) if we fail to compare **otherwise similar** units and as a result attribute to $Z$ what is **actually caused by factors $X$** that differ between the $Z=0$ and $Z=1$ observations.
+
+We often display this confounding using a directed acyclic graph (DAG):
+![](confounding_dag.png)
+
+This is why it's not enough just to compare the risk of disease between smokers and non-smokers.  We need to compare the risk of disease between smokers and **otherwise similar** non-smokers.  
+
+So we will need to think about how we can incorporate this idea of **otherwise similar** into the tables and graphs we made above.
+
+## Assignment 1-1
+
+Create a data display (graph or table) with the NMES data to answer Question 1.1: How does the risk of disease compare for smokers and otherwise similar non-smokers?
+
+* Submit your data display in R Markdown through Github by Sunday (January 26, 2025) at midnight. You can find a link to create this assignment in GitHub on Canvas.
+* Post a screenshot of your data display (just the graph or table) on Piazza in the "Assignment 1-1 Display" thread.  You are welcome to post this anonymously to your classmates. You can also include comments about what your chose to do or questions you had as you were making the display.  Comments like: "I wanted to do _______, but couldn't figure out how" can be especially helpful.
+* You may work together on this assignment, but you must submit your own data display; please credit in your assignment anyone with whom you collaborated.
+* Next week in class we will start with discussion/critiques of your displays and brainstorm as a class on ideas to improve these displays.  You are welcome to respond to your classmates posts on Piazza before then; just keep in mind we are working as a class to improve our work each week, so be **constructive** rather than **negative** in your responses.
+
+A couple of hints to get you started:
+
+* You can modify the graphs we made today to incorporate additional variables using the `facet_wrap()` and `facet_grid()` options.  Here are some examples:
+
+``` r
+ggplot(data = nmes_data) + 
+  geom_bar(mapping = aes(x = lc5, fill = eversmk), position = "fill") +
+  facet_wrap(~beltuse)
+```
+
+![](Module1_Class1_files/figure-html/barfacet-1.png)<!-- -->
+
+``` r
+ggplot(data = nmes_data) + 
+  geom_bar(mapping = aes(x = lc5, fill = eversmk), position = "fill") +
+  facet_grid(marital~beltuse)
+```
+
+![](Module1_Class1_files/figure-html/barfacet-2.png)<!-- -->
+
+* You can modify the tables we made today to incorporate additional variables by adding more variables to the table. Here's an example:
+
+``` r
+nmes_data %>%
+  count(beltuse, eversmk, lc5) %>%
+  mutate(prop = n/sum(n))
+```
+
+```
+## # A tibble: 11 × 5
+##    beltuse eversmk      lc5       n     prop
+##      <dbl> <fct>        <fct> <int>    <dbl>
+##  1       1 Never smoker No LC   432 0.106   
+##  2       1 Ever smoker  No LC   509 0.125   
+##  3       1 Ever smoker  LC       16 0.00392 
+##  4       2 Never smoker No LC   395 0.0969  
+##  5       2 Never smoker LC        2 0.000490
+##  6       2 Ever smoker  No LC   435 0.107   
+##  7       2 Ever smoker  LC        6 0.00147 
+##  8       3 Never smoker No LC  1253 0.307   
+##  9       3 Never smoker LC        2 0.000490
+## 10       3 Ever smoker  No LC  1009 0.247   
+## 11       3 Ever smoker  LC       19 0.00466
+```
+
+``` r
+nmes_data %>%
+  count(beltuse, eversmk, lc5) %>%
+  group_by(beltuse, eversmk) %>%
+  mutate(prop = n/sum(n))
+```
+
+```
+## # A tibble: 11 × 5
+## # Groups:   beltuse, eversmk [6]
+##    beltuse eversmk      lc5       n    prop
+##      <dbl> <fct>        <fct> <int>   <dbl>
+##  1       1 Never smoker No LC   432 1      
+##  2       1 Ever smoker  No LC   509 0.970  
+##  3       1 Ever smoker  LC       16 0.0305 
+##  4       2 Never smoker No LC   395 0.995  
+##  5       2 Never smoker LC        2 0.00504
+##  6       2 Ever smoker  No LC   435 0.986  
+##  7       2 Ever smoker  LC        6 0.0136 
+##  8       3 Never smoker No LC  1253 0.998  
+##  9       3 Never smoker LC        2 0.00159
+## 10       3 Ever smoker  No LC  1009 0.982  
+## 11       3 Ever smoker  LC       19 0.0185
+```
+
+* You can also subset the data if you want to make a graph or table on just a portion of the data.  Here's an example:
+
+``` r
+nmes_data_female <- nmes_data %>%
+  filter(female == 1)
+
+ggplot(data = nmes_data_female) + 
+  geom_bar(mapping = aes(x = lc5, fill = eversmk), position = "fill")
+```
+
+![](Module1_Class1_files/figure-html/datasubset-1.png)<!-- -->
+
+* You might find it helpful to recode the variables you are planning to use in your graph to designate groups with meaningful labels (Male, Female) rather than meaningless numbers (0, 1).  Reminder to look at how we did this for `eversmk` and `lc5` in the "Bar graphs" section of this document above.
+
+As you are working on your assignment, if you are looking for additional ways to challenge yourself think about:
+
+* How could I improve the clarity of what my figure or table is showing? Is it clear at a glance what the different variables displayed are?
+
+* What extraneous information is being shown in the figure or table? How could I go about simplifying that?
+
+* How could I improve the organization and readability of my code? There are some great tips on this in the [Workflow: code style](https://r4ds.hadley.nz/workflow-style){target="_blank"} section of the R for Data Science book if you are interested. (I am not always the best at following these myself!)
+
