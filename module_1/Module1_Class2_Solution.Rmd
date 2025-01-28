@@ -1,0 +1,428 @@
+---
+title: "Class 1-2: Discussion of data displays for Question 1-1"
+author: "Health Data Analysis Practicum (AS.280.347)"
+date: "January 27, 2025"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: false
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Preliminaries
+
+First we load the packages that we will be using in this document.  It's good practices to load packages as the beginning so they are all in the same place.  If you decide later you need an additional package, add it to the top of the document!
+```{r}
+library(tidyverse)  # core group of tidyverse packages
+library(kableExtra)  # to make nice tables
+```
+
+## Module 1: Smoking and the risk of disease
+
+Questions of interest:
+
+* **Question 1.1: ** How does the risk of disease compare for smokers and otherwise similar non-smokers?
+
+<center>
+![](Q1_dag.png){width=500px}
+</center>
+
+* **Queston 1.2: ** Does the contribution of smoking to the risk of disease vary by sex or socio-economic status (SES)?
+
+<center>
+![](Q2_dag.png){width=500px}
+</center>
+
+To address each question we want:
+
+* A data display (graph or table)
+* A statistical analysis (with interprepration)
+
+We will answer these questions using data from the National Medical Expenditures Survey (NMES)
+
+## Discussion of NMES data displays for Question 1-1
+
+In your small groups, take 25 minutes to discuss the following 7 displays.  For each display, answer the following questions:
+
+* Does this display effectively answer our question on interest: *How does the risk of disease compare for smokers and otherwise similar non-smokers?*
+     * Does it clearly show the risk of disease?
+     * Does it allow you to easily compare smokers to non-smokers? Why or why not?
+     * Does it account for "otherwise similar"? Why or why not? Is there a major variable that is not included in the plot that you think is important or which may be explaining some of the patterns you see in the display?
+     * What would your answer to the question be based on this display?  Does this answer match your intuition?
+* How can the display be improved to more clearly answer our question of interest?
+* What is something that you like about the display?
+* Look at the code used to create the display. Is it easy to read and understand? Is there extra code that is not used?
+* Pick a couple of displays and add code to make the improvements you have in mind.
+
+**If you have additional time,** scroll through the post of all student work and make note of anything that you especially like about what any of your peers has done: https://piazza.com/class/m5lijvm8x3960v/post/7
+
+### Display 1
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+#clean up the categories
+nmes_data <- nmes_data %>%
+  mutate(
+    smoking_status = ifelse(eversmk == 1, "Smoker", "Non-Smoker"),
+    marital_status = factor(
+      marital,
+      labels = c("Single", "Married", "Widowed", "Divorced", "Separated")
+    )
+  )
+
+# CHD prevalence by smoking status
+ggplot(nmes_data, aes(x = smoking_status, fill = factor(chd5))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("0" = "pink", "1" = "red"), 
+                    name = "CHD Status", 
+                    labels = c("No CHD", "CHD")) +
+  labs(
+    title = "Comparison of coronary heart disease prevalence",
+    subtitle = "smokers vs non-smokers, stratified by marital status",
+    x = "smoking status",
+    fill = "CHD status"
+  ) +
+  facet_wrap(~marital_status)
+
+
+```
+
+
+I personally would feel more comfortable first making a table of values, to be sure it is plotting what I expect. As it turns out, it looks identical in this case.
+
+```{r}
+
+my_table <- nmes_data %>%
+  count(smoking_status, marital_status, chd5) %>%
+  group_by(smoking_status, marital_status) %>%
+  mutate(prop = n/sum(n))
+
+ggplot(data = my_table) + 
+  geom_bar(aes(x = smoking_status, y = prop, fill = factor(chd5)), stat = "identity") +
+  scale_fill_manual(values = c("0" = "pink", "1" = "red"),
+                    name = "CHD Status",
+                    labels = c("No CHD", "CHD")) +
+  labs(
+    title = "Comparison of coronary heart disease prevalence",
+    subtitle = "smokers vs non-smokers, stratified by marital status",
+    x = "smoking status",
+    fill = "CHD status",
+    y = "proportion"
+  ) +
+  facet_wrap(~marital_status)
+
+
+```
+
+
+### Display 2
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+nmes_data <- nmes_data %>%
+  mutate(mscd = factor((lc5 + chd5) >= 1,
+                       levels = c(FALSE, TRUE),
+                       labels = c("No MSCD", "MSCD")),
+         eversmk = factor(eversmk, 
+                          levels = c("0", "1"), 
+                          labels = c("Never smoker", "Ever smoker")),
+         female = factor(female,
+                         levels = c("0", "1"),
+                         labels = c("Male", "Female")),
+         poor = factor(poor, 
+                       levels = c("0", "1"),
+                       labels = c("Not Poor", "Poor")))
+
+my_table <- nmes_data %>%
+  count(poor, female, mscd, eversmk) %>%
+  group_by(poor, female, eversmk) %>%
+  mutate(prop = n/sum(n))
+
+ggplot(data = my_table) + 
+  geom_bar(aes(x = eversmk, y = prop, fill = mscd), stat = "identity", position = "stack") +
+  facet_grid(poor~female)
+
+```
+
+
+Here, I filtered to only show the MCSD rate (not the No MSCD rate), modified the axis labels, and removed the legend. I also added labels.
+
+```{r}
+
+my_table %>% 
+  filter(mscd == "MSCD") %>%
+  ggplot() + 
+  geom_bar(aes(x = eversmk, y = prop, fill = mscd), stat = "identity") +
+  facet_grid(poor~female) +
+  labs(
+    title = "Rate of MSCD",
+    subtitle = "Smokers vs non-smokers, stratified by sex and socio-economic status",
+    x = "Smoking status",
+    y = "Rate of MSCD") +
+  guides(fill="none")
+
+
+
+```
+
+
+### Display 3
+
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+nmes_data <- nmes_data %>%
+  mutate(eversmk = factor(eversmk, 
+                          levels = c("0", "1"),
+                          labels = c("Never Smoker", "Ever Smoker")),
+         lc5 = factor(lc5, 
+                      levels = c("0", "1"), 
+                      labels = c("No LC", "LC")),
+         female = factor(female, 
+                         levels = c("0", "1"),
+                         labels = c("Male", "Female")),
+         educate = factor(educate, 
+                          levels = c("1", "2", "3", "4"), 
+                          labels = c("College Grad", "Some College", "HS Grad", "Other"))
+  )
+
+
+ggplot(data = nmes_data) +
+ geom_bar(mapping = aes(x = eversmk, y = after_stat(prop), group = lc5, fill = lc5), position = "fill") +
+  facet_grid(~educate) +
+  labs(
+    title = "Risk of Lung Cancer by Smoking Status and Education Level",
+    x = "Smoking Status",
+    y = "Proportion",
+    fill = "Lung Cancer"
+  ) 
+
+```
+
+
+Here, I filtered to only show the MCSD rate (not the No MSCD rate), modified the axis labels, and removed the legend. I also angled the x-axis labels. 
+
+```{r}
+
+my_table <- nmes_data %>%
+  count(eversmk, educate, lc5) %>%
+  group_by(eversmk, educate) %>%
+  mutate(prop = n/sum(n))
+
+my_table %>% 
+  filter(lc5 == "LC") %>%
+  ggplot() + 
+  geom_bar(aes(x = eversmk, y = prop, fill = lc5), stat = "identity") +
+  facet_grid(~educate) +
+  labs(
+    title = "Rate of lung cancer",
+    subtitle = "Smokers vs non-smokers, stratified education status",
+    x = "Smoking status",
+    y = "Rate of lung cancer") +
+  guides(fill="none") +
+  theme(axis.text.x = element_text(angle = 22.5,
+                                   hjust = 1,
+                                   size = 9))
+
+
+```
+
+
+### Display 4
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+nmes_data <- nmes_data %>%
+  mutate(eversmk = factor(eversmk, 
+                          levels = c("0", "1"), 
+                          labels = c("Never smoker", "Ever smoker")),
+         lc5 = factor(lc5, 
+                      levels = c("0", "1"), 
+                      labels = c("No LC", "LC")),
+         female = factor(female, 
+                         levels = c("0", "1"), 
+                         labels = c("Male", "Female")))
+# Table stratified by gender
+my_table <- nmes_data %>%
+  count(lc5, eversmk, female) %>%
+  group_by(eversmk, female) %>%
+  mutate(prop = n/sum(n)) %>%
+  rename(
+    "Smoking Status" = eversmk, 
+    "Lung Cancer (LC) Status" = lc5,
+    "Gender" = female
+  )
+my_table %>%
+  kable(digits = 3) %>%
+  kable_styling()
+
+```
+
+
+I filtered to only show the rate for the LC people, and grouped to compare ever smokers to never smokers more directly:
+
+```{r}
+
+# Table stratified by gender
+my_table <- nmes_data %>%
+  count(lc5, eversmk, female) %>%
+  group_by(eversmk, female) %>%
+  mutate(prop = n/sum(n)) %>%
+  filter(lc5 == "LC") %>%
+  arrange(female, eversmk)%>%
+  rename(
+    "Smoking Status" = eversmk, 
+    "Lung Cancer (LC) Status" = lc5,
+    "Gender" = female
+  )
+my_table %>%
+  kable(digits = 3) %>%
+  kable_styling()
+
+
+```
+
+
+### Display 5
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+nmes_data <- nmes_data %>%
+  mutate(eversmk = factor(eversmk, 
+                          levels = c("0", "1"), 
+                          labels = c("Never smoker", "Ever smoker")),
+         chd5 = factor(chd5, 
+                      levels = c("0", "1"), 
+                      labels = c("No CHD", "CHD")),
+         educate = factor(educate, 
+                         levels = c("1", "2","3","4"),
+                         labels = c("College Grad", "Some College", "HS Grad", "Other"))
+         )
+
+my_table <- nmes_data %>%
+  count(eversmk, chd5, educate) %>%
+  group_by(eversmk) %>%
+  mutate(percent = round (n/sum(n) * 100, 1))
+
+my_table 
+```
+
+
+Similar to the above, I filtered to only the CHD group and rearranged to better compare ever to never smokers.
+
+```{r}
+
+my_table <- nmes_data %>%
+  count(eversmk, chd5, educate) %>%
+  group_by(eversmk, educate) %>%
+  mutate(percent = round (n/sum(n) * 100, 1)) %>%
+  filter(chd5 == "CHD") %>%
+  arrange(educate)
+
+my_table %>%
+  kable(digits = 3) %>%
+  kable_styling()
+
+
+```
+
+
+### Display 6
+
+
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+nmes_data <- nmes_data %>%
+  mutate(eversmk = factor(eversmk, 
+                          levels = c("0", "1"), 
+                          labels = c("Never smoker", "Ever smoker")),
+         lc5 = factor(lc5, 
+                      levels = c("0", "1"), 
+                      labels = c("No LC", "LC")),
+         female = factor(female, 
+                      levels = c("0", "1"), 
+                      labels = c("Male", "Female"))
+         )
+
+ggplot(data = nmes_data) + 
+  geom_bar(mapping = aes(x = lc5, fill = eversmk), position = "fill") +
+  facet_grid(female~beltuse)
+
+```
+
+
+Here I used a table to make sure the values plotted were the correct conditional probabilities. Further improvements can be made along the lines of some of the examples above.
+
+```{r}
+
+my_table <- nmes_data %>%
+  count(eversmk, lc5, female, beltuse) %>%
+  group_by(eversmk, female, beltuse) %>%
+  mutate(percent = round (n/sum(n) * 100, 1))
+
+
+my_table %>%
+  ggplot() + 
+  geom_bar(aes(x = eversmk, y = percent, fill = lc5), stat = "identity") +
+  facet_grid(female~beltuse)
+
+
+
+```
+
+
+### Display 7
+
+```{r echo = FALSE}
+nmes_data <- read_csv("module_1/nmesUNPROC.csv")
+
+# I am going to refactor this
+nmes_data$eversmk <- factor(nmes_data$eversmk, 
+                            levels = c(0, 1), 
+                            labels = c("Never Smoked", "Has Smoked"))
+
+nmes_data <- nmes_data %>% mutate(poor = factor(poor, 
+                                                levels = c("0", "1"),
+                                                labels = c("Not Poor", "Poor")),
+                                  female = factor(female,
+                                                  levels = c("0", "1"),
+                                                  labels = c("Male", "Female")))
+
+# log trasnforming the total expenditures because there are some really large values
+nmes_data$logtotalexp <- log(nmes_data$totalexp) 
+
+
+ggplot(nmes_data, aes(x = logtotalexp, color = eversmk)) +
+  geom_boxplot() +
+  facet_wrap(female ~ poor)
+
+
+```
+
+
+Some suggested improvements. Here, I fixed the y-axis labels and got rid of the legend.
+
+```{r}
+ggplot(nmes_data, aes(x = logtotalexp, y = eversmk, color = eversmk)) +
+  geom_boxplot() +
+  facet_wrap(female ~ poor)+
+  guides(color="none")
+
+```
+
+
+
