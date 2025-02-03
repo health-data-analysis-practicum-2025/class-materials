@@ -1,5 +1,5 @@
 ---
-title: "Class 1-5: Discussion of results for Question 1-1"
+title: "Class 1-4: Discussion of results for Question 1-1"
 author: "Health Data Analysis Practicum (AS.280.347)"
 date: "February 3, 2025"
 output: 
@@ -49,7 +49,7 @@ We will answer these questions using data from the National Medical Expenditures
 
 ## Discussion of NMES logistic regression results for Question 1-1
 
-In your breakout groups, take 20-25 minutes to discuss the following sets of logistic regression results and interpretations.  Looking at all 8 sets of results/interpretations, answer the following questions:
+In your breakout groups, take 20-25 minutes to discuss the following sets of logistic regression results and interpretations.  Looking at all 7 sets of results/interpretations, answer the following questions:
 
 (1) In order to address the comparison of interest between smokers and non-smokers, which variable **must** be included in the model?
 
@@ -247,7 +247,7 @@ temp %>%
       guides(fill = "none")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/results4viz-1.png)<!-- -->
 
 
 ### Results 5
@@ -396,7 +396,7 @@ model1 %>%
 
 
 
-### Results 8 (just a revised visualization)
+### Results 8 (just a couple of revised visualizations)
 
 
 
@@ -422,7 +422,7 @@ my_table %>%
   theme_minimal()
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/results8plot-1.png)<!-- -->
 
 And another (actually from a student from last year):
 
@@ -452,7 +452,7 @@ nmes_table %>%
         plot.subtitle = element_text(hjust = 0.5))
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/results8bplot-1.png)<!-- -->
 
 
 ## R notes based Assignment 1-2
@@ -679,7 +679,7 @@ my_model_results %>%
 |age                |      1.077|    0.00|            (1.07, 1.09)|
 |femaleFemale       |      0.736|    0.03|            (0.56, 0.97)|
 
-You can also change the variable names as well:
+You can also change the variable names as well (and see two other examples up above, which I actually like better):
 
 ``` r
 my_model_results$term <- c("Intercept", "Ever smoker", "Age (years)", "Female")
@@ -767,7 +767,7 @@ ggplot(plot_data) +
            stat="identity", fill = "deeppink")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/colorexample-1.png)<!-- -->
 
 ``` r
 ggplot(plot_data) +
@@ -776,7 +776,7 @@ ggplot(plot_data) +
   scale_fill_manual(values = c("deeppink", "chartreuse1"))
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-35-2.png)<!-- -->
+![](Module1_Class4_files/figure-html/colorexample-2.png)<!-- -->
 
 Sometimes it's better to leave color choices to the professionals, who know which colors look good together.  If you load the `RColorBrewer` package with `install.packages("RColorBrewer")`, you can select from within a predetermined color palatte.  You can see these color palettes [here](https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html).  You apply them in a similar way as your manual colors:
 
@@ -786,7 +786,7 @@ library(RColorBrewer)
 display.brewer.all() # to see all the colors
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-36-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/brewerexample-1.png)<!-- -->
 
 ``` r
 ggplot(plot_data) +
@@ -795,7 +795,7 @@ ggplot(plot_data) +
   scale_fill_brewer(palette = "Dark2")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-36-2.png)<!-- -->
+![](Module1_Class4_files/figure-html/brewerexample-2.png)<!-- -->
 
 ### Adding labels to figure and changing themes
 
@@ -813,7 +813,7 @@ ggplot(plot_data) +
        title="Risk of MSCD, comparing smokers to non-smokers")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/themebw-1.png)<!-- -->
 
 One more important piece of controlling the look of your plot in ggplot2 uses `theme()`. You can control the look of your graphing using the *many* arguments of theme. Here, we'll introduce how to change the axis text size; however, if you type `?theme` below, you'll see all of the things that can be changed on your plots using `theme()`. For a good demonstration of themes, see https://github.com/jrnold/ggthemes.
 
@@ -830,7 +830,7 @@ ggplot(plot_data) +
   theme(axis.text=element_text(size=12))
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/theme2-1.png)<!-- -->
 
 Finally, here's a link to good resource about adding labels, text, scales, and themes to your graphics: https://r4ds.hadley.nz/communication.html
 
@@ -849,7 +849,7 @@ ggplot(data = my_table) +
   geom_bar(aes(x = eversmk, y = prop, fill = disease), stat = "identity", position = "dodge")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-39-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/legendexample-1.png)<!-- -->
 
 You can change the name of this legend in the `labs()` function using the names of the aesthetic shown in the legend.  In this case, the legend shows the `fill` aesthetic, so we can rename it as follows:
 
@@ -859,7 +859,7 @@ ggplot(data = my_table) +
   labs(fill = "MSCD status")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-40-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/legendname-1.png)<!-- -->
 
 We can also move the legend to a different location using the `legend.position` option within the `theme()` function:
 
@@ -870,7 +870,7 @@ ggplot(data = my_table) +
   theme(legend.position = "bottom")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-41-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/legendbottom-1.png)<!-- -->
 
 Choices for the position can be `bottom`, `top`, `right`, `left`, or `none`.  The none option is especially useful when the legend doesn't add any useful information.  Consider the graph where we only show the risk of disease, not the risk of no disease:
 
@@ -886,7 +886,7 @@ ggplot(data = my_table) +
   labs(fill = "MSCD status")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-42-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/legend2-1.png)<!-- -->
 
 The legend on the side is not useful since there's only one color anyway!  So we can remove it:
 
@@ -897,7 +897,7 @@ ggplot(data = my_table) +
   theme(legend.position = "none")
 ```
 
-![](Module1_Class4_files/figure-html/unnamed-chunk-43-1.png)<!-- -->
+![](Module1_Class4_files/figure-html/legendremove-1.png)<!-- -->
 
 ### Removing missing values
 

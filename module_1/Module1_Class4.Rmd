@@ -1,5 +1,5 @@
 ---
-title: "Class 1-5: Discussion of results for Question 1-1"
+title: "Class 1-4: Discussion of results for Question 1-1"
 author: "Health Data Analysis Practicum (AS.280.347)"
 date: "February 3, 2025"
 output: 
