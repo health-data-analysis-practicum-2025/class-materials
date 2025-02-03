@@ -454,6 +454,26 @@ nmes_table %>%
 
 ![](Module1_Class4_files/figure-html/results8bplot-1.png)<!-- -->
 
+``` r
+### Plots the graph - sample sizes instead
+nmes_table %>%
+  filter (disease == "Disease")%>%
+  ggplot()+ 
+  geom_bar(aes(x = eversmk, y = percent, fill=disease), fill = "lightblue", stat="identity")+
+  facet_grid(female~poor)+
+  theme_bw(base_size=8.5)+
+  geom_text(aes(x=eversmk, y= percent, label=paste0("n = ", n), vjust=1.5))+
+  labs(y = "Risk of Major Smoking Caused Diseases (%)",
+       x = "Ever Smoked",
+       title = "Risk of Major Smoking Caused Diseases (MSCD), Comparing Smokers to Non-Smokers",
+       subtitle = "N = Never Smoked, Y = Ever Smoked")+
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+![](Module1_Class4_files/figure-html/results8bplot-2.png)<!-- -->
+
 
 ## R notes based Assignment 1-2
 
