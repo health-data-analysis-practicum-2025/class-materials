@@ -1,0 +1,137 @@
+---
+title: "Class 2-1: Intro to Module 2, Part 2"
+author: "Health Data Analysis Practicum (AS.280.347)"
+date: "February 17, 2025"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: false
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, error = TRUE)
+```
+
+## Preliminaries
+
+The libraries used in this analysis are listed in the following table, along with their purpose in this particular case study:
+
+
+|Library|Purpose|
+|---|--------------------------------------------------------------------------------------------------------------|
+|`tidyverse`|A coherent system of packages for data manipulation, exploration and visualization|
+|`haven`|A useful tool to import and export data from SAS, STATA, and SPSS formats|
+|`broom`|Takes the messy output of built-in functions in R, such as lm, nls, or t.test, and turns it into tidy data frames|
+|`survey`|Provides useful functions for analyzing complex survey samples|
+|`ggpubr`|Provides some easy-to-use functions for creating and customizing 'ggplot2'- based publication ready plots|
+|`ggrepel`|Provides text and label geoms for 'ggplot2' that help to avoid overlapping text labels|
+|`kableExtra`|Helps with building common complex tables and manipulating table styles; creates awesome HTML tables|
+|`plotrix`|A variety of plots, various labeling, axis and color scaling functions|
+|`knitr`|Functions for creating nice reports in RMarkdown|
+
+In order to run the code for this module, please ensure you have these packages installed. You should be prompted to do so by Posit Cloud.
+
+First load the packages that we will be using in this document. You will need to install some of these since we have not used them before.
+```{r libraries}
+library(tidyverse)  
+library(haven)
+library(broom)
+library(survey)
+library(ggpubr)
+library(ggrepel)
+library(kableExtra)
+library(plotrix)
+library(knitr)  
+
+```
+
+
+
+
+# Initial data inspection and cleaning
+
+The NYC HANES data file we are working with is a SAS formatted file, so we will use the function `read_sas()` from the `haven` library to read in the data and create a [tibble](https://tibble.tidyverse.org){target="_blank"} (or `tbl_df`) in `R`. Tibbles are nice because they do not change variable names or data types, and they have an enhanced `print()` method which makes it easier to view the data when working with large datasets containing complex objects. The [`haven` library](https://www.rdocumentation.org/packages/haven/versions/2.1.0){target="_blank"} is useful to import and export files saved in a variety of formats such as [SAS, STATA, and SPSS](http://stanfordphd.com/Statistical_Software.html){target="_blank"}. 
+
+We now read in the data and check the dimensions of the data object:
+```{r read-data}
+dat <- read_sas('module_2/data/d.sas7bdat')
+dim(dat)
+```
+
+Our data contains `r nrow(dat)` observations on `r ncol(dat)` different variables. For our analysis, we will only consider a subset of these variables.
+
+
+# Data wrangling
+
+## Select the variables (or columns)
+
+This is a survey dataset based on interviews and questionnaires with `r ncol(dat)` variables. Some variables are likely not relevant to our current research question, such as _'LAQ1: What language is being used to conduct this interview'_. 
+
+Although previous research has shown hypertension is associated  with drinking, smoking, cholesterol values, and triglyceride levels, we will also consider whether other variables -- which at first might not seem highly related to hypertension -- have an association with hypertension. We've selected 13 variables to consider in our analysis.  
+
+We will use the `select()` function from the `dplyr` package to choose and rename the columns that we want. 
+
+Here is a simple example to show how the renaming of the column names works:
+
+```{r renamecols}
+rename <- 
+  dat %>% 
+    select(id = KEY,
+           race = DMQ_14_1,
+           diabetes = DX_DBTS)
+colnames(rename)
+```
+
+In this example, we select the three variables of `KEY`, `DMQ_14_1`, and `DX_DBTS` and rename them to the more descriptive `id`, `race`, and `diabetes`.  We save this smaller and renamed data frame in the `rename` object rather than write over our original data. Undoubtedly, compared with `DMQ_14_1` and `DX_DBTS`, `race` and `diabetes` are more readable and easier to understand.
+
+Now we select and rename the 13 variables we will consider in our analysis:
+
+```{r select-cols}
+rename <- 
+  dat %>% 
+    select(id = KEY,
+           age = SPAGE,
+           race = DMQ_14_1,
+           gender = GENDER,
+           born = US_BORN,
+           diet = DBQ_1,
+           income = INC20K,
+           diabetes = DIQ_1,
+           bmi = BMI,
+           cholesterol = BPQ_16,
+           drink = ALQ_1_UNIT,
+           smoking = SMOKER3CAT,
+           hypertension = BPQ_2,
+           surveyweight = EXAM_WT)
+```
+
+We will give a description of each variable below, but for full details we refer the reader to the [Variable Codebook](https://med.nyu.edu/departments-institutes/population-health/divisions-sections-centers/epidemiology/sites/default/files/nyc-hanes-datasets-and-resources-public-dataset-codebook.pdf){target="_blank"}. 
+
+
+
+## Initial data inspection
+
+The first step of any data analysis should be to explore the data through data visualizations and data summaries like tables and summary statistics. There are several ways that you can have an initial glance at your data. The `summary()` or `head()` functions in are excellent ways to help you have a quick look at the data set.
+
+The `summary()` function tabulates categorical variables and provides summary statistics for continuous variables, while also including a count of missing values, which can be very important in deciding what variables to consider in downstream analysis.
+
+```{r summarydat}
+summary(rename)
+
+```
+
+
+
+We see that certain variables have a large number of `NA` values; in particular `drink` has `r sum(is.na(rename$drink))` `NA` values and `income` has `r sum(is.na(rename$income))` `NA` values. Directly removing rows containing missing data is not desirable considering the large number of such rows, so we should look more closely at the missing values. 
+
+Here are a few more questions for you to explore with your group:
+
+(1) Looking at the summary of the variables in this data set, and the NYC HANES codebook, which variables do you think you will recode as categorical variables and which will you leave as numeric?
+
+(2) Think about the hypertension variable. When you recode it, will it matter what order you put the levels in? Do you want it to stay in numerical order as it is encoded or would you prefer to change the order?
+
+(3) Look at the drink variable, which has a large number of missing (NA) data values. Examine the code book to see if you can figure out why these values are missing. Sometimes data observations with missing data end up getting excluded from downstream visualizations and analysis. Can you find a solution to this problem that does not involve dropping all these individuals from our data analysis? To answer this, examine the [Variable Codebook](https://med.nyu.edu/departments-institutes/population-health/divisions-sections-centers/epidemiology/sites/default/files/nyc-hanes-datasets-and-resources-public-dataset-codebook.pdf){target="_blank"} for clues and a potential solution. As a hint, who answered the question corresponding to ALQ_1_UNIT in the raw data set?
