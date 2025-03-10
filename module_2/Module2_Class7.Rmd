@@ -1,0 +1,1198 @@
+---
+title: "Class 2-7: Wrapping up Module 2"
+author: "Health Data Analysis Practicum (AS.280.347)"
+date: "March 10, 2025"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: false
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, error = TRUE)
+```
+
+## Module 2: Factors that are associated with development of hypertension
+
+Recall that our main questions of interest are:
+
+  * Question 2.1: What factors measured in the NYC HANES survey are associated with having hypertension?
+  * Question 2.2: How do we build a "good" model that tells us something about associations with hypertension as seen in this data set?
+  * Question 2.3: How do our estimates from survey-weighted logistic regression differ from those where we ignore survey weights?
+
+
+The data science learning objectives for this module include:
+
+  * Understand the components of a data analysis report
+  * Gain experience performing data cleaning, and assessing whether you have been successful
+  * Practice selecting data visualizations that fit into the context of your statistical analysis
+
+The statistical learning objectives for this module include:
+
+  * Gain further experience with logistic regression and selecting an appropriate model for your question
+  * Understand what a survey-weighted analysis is and how/when we perform one
+  * Learn how to select survey weights for unbalanced data
+
+
+## Reminder: What are the data?
+
+For this case study, we will use data from the [New York City (NYC) Health and Nutrition Examination Survey (NYC HANES)](http://nychanes.org/){target="_blank"}, modeled on the [National Health and Nutrition Examination Survey (NHANES)](https://wwwn.cdc.gov/nchs/nhanes/default.aspx){target="_blank"}. NHANES is a population-based, cross-sectional study with data collected from a physical examination and laboratory tests, as well as a face-to-face interview and an audio computer-assisted self-interview (ACASI). It is designed to assess the health and nutritional status of adults and children in the United States. NYC HANES is a local version of NHANES, which implies it mainly focuses on the New York area. 
+
+
+## Learning objectives for this week
+
+Our main question of interest for this module is: Based on the data collected from NYC HANES, which risk factors play a role in development of hypertension?
+
+Today, we will continue to work toward answering this by learning how to:
+
+* Describe what makes an effective comparison of survey-weighted and unweighted model results and share some examples of tables and figures to help inspire you to improve your own visualizations
+* Touch base on any questions about model selection and selecting the correct survey weights to use in your analysis.
+* Review how to include inline R code and why it is useful.
+* Discuss specific best practices for writing statistical results
+
+
+
+Start by loading libraries and raw data set.
+```{r libraries}
+library(tidyverse)  
+library(knitr)  
+library(ggpubr)
+library(ggrepel)
+library(tidyverse)
+library(kableExtra)
+library(survey)
+library(haven)
+library(broom)
+library(plotrix)
+library(pander)
+library(gridExtra)
+
+dat <- read_sas('./module_2/data/d.sas7bdat')
+```
+
+```{r recodedat, echo=FALSE}
+rename <- dat %>% 
+  select(id = KEY,
+         age = SPAGE,
+         race = DMQ_14_1,
+         gender = GENDER,
+         born = US_BORN,
+         diet = DBQ_1,
+         income = INC20K,
+         diabetes = DIQ_1,
+         bmi = BMI,
+         cholesterol = BPQ_16,
+         drinkfreq = ALQ_1,
+         drinkunit = ALQ_1_UNIT,
+         smoking = SMOKER3CAT,
+         hypertension = BPQ_2,
+         surveyweight = EXAM_WT)
+
+rename <- rename %>% 
+  mutate(drink_denom = case_when(drinkfreq == 0 | drinkunit == 1 ~ 1,
+                                   drinkunit == 2 ~ 52 / 12,
+                                   drinkunit == 3 ~ 52),
+         drink = drinkfreq / drink_denom)
+
+
+hy_df <- rename %>% 
+  mutate(race = factor(race, 
+                       levels = c(100, 110, 120, 140, 180, 250), 
+                       labels = c('White', 'Black/African American', 
+                                  'Indian /Alaska Native', 
+                                  'Pacific Islander', 
+                                  'Asian', 'Other Race')),
+         gender = factor(gender, 
+                         levels = c(1, 2), 
+                         labels = c('Male', 'Female')),
+         born = factor(born, 
+                       levels = c(1, 2),
+                       labels = c("US Born", "Non-US Born")),
+         diet = factor(diet, 
+                       levels = c(5:1), 
+                       labels = c('Poor', 'Fair', 'Good', 
+                                  'Very good','Excellent')),
+         income = factor(income, 
+                         levels = c(1:6), 
+                         labels = c('Less than $20,000','$20,000 - $39,999',
+                                    '$40,000 - $59,999','$60,000 - $79,999',
+                                    '$80,000 - $99,999','$100,000 or more')),
+         diabetes = factor(diabetes, 
+                           levels = c(2, 1, 3), 
+                           labels = c('No','Yes','Prediabetes')),
+         cholesterol = factor(cholesterol, 
+                              levels = c(2, 1), 
+                              labels = c('Low value','High value')),
+         drinkcat = factor(drink >= 1, 
+                        labels = c('<1 / wk', '1+ / week')),
+         smoking = factor(smoking, levels=c(1,3,2), 
+                         labels=c('Never smoker','Former smoker','Current smoker')),
+         hypertension = factor(hypertension, 
+                               levels = c(2, 1), 
+                               labels = c('No','Yes'))
+  ) 
+
+
+hy_p_df <- 
+  hy_df %>%
+  drop_na()
+
+hypertension_design <- svydesign(
+  id = ~1,
+  weights = ~hy_df$surveyweight,
+  data = hy_df
+)
+h_design_nona <- subset(hypertension_design, complete.cases(hy_df))
+```
+
+
+
+## Getting to Question 2.3
+
+Recall Question 2.3: How do our estimates from survey-weighted logistic regression differ from those where we ignore survey weights?
+
+To answer this, use your final model from your survey-weighted analysis and fit a standard (unweighted) logistic regression instead. How might you want to compare the results of these two models? A table? Some kind of visualization?
+
+Some of you posted examples of tables and figures in your work this week on Piazza. We will start with some group discussion of the figures you created as well as some additional examples from previous years.
+
+
+### Example plots
+
+In your groups, for each plot, discuss things that you like and things that you think could be improved. 
+
+
+#### Example 1
+
+
+```{r example1, echo = FALSE}
+
+rename <- dat %>% 
+  select(id = KEY,
+         age = SPAGE,
+         race = DMQ_14_1,
+         gender = GENDER,
+         born = US_BORN,
+         diet = DBQ_1,
+         income = INC20K,
+         diabetes = DIQ_1,
+         bmi = BMI,
+         cholesterol = BPQ_16,
+         drinkfreq = ALQ_1,
+         drinkunit = ALQ_1_UNIT,
+         smoking = SMOKER3CAT,
+         hypertension = BPQ_2,
+         surveyweight = EXAM_WT)
+
+rename <- rename %>% 
+  mutate(drink_denom = case_when(drinkfreq == 0 | drinkunit == 1 ~ 1,
+                                   drinkunit == 2 ~ 52 / 12,
+                                   drinkunit == 3 ~ 52),
+         drink = drinkfreq / drink_denom)
+
+
+hy_df <- rename %>% 
+  mutate(race = factor(race, 
+                       levels = c(100, 110, 120, 140, 180, 250), 
+                       labels = c('White', 'Black/African American', 
+                                  'Indian /Alaska Native', 
+                                  'Pacific Islander', 
+                                  'Asian', 'Other Race')),
+         gender = factor(gender, 
+                         levels = c(1, 2), 
+                         labels = c('Male', 'Female')),
+         born = factor(born, 
+                       levels = c(1, 2),
+                       labels = c("US Born", "Non-US Born")),
+         diet = factor(diet, 
+                       levels = c(5:1), 
+                       labels = c('Poor', 'Fair', 'Good', 
+                                  'Very good','Excellent')),
+         income = factor(income, 
+                         levels = c(1:6), 
+                         labels = c('Less than $20,000','$20,000 - $39,999',
+                                    '$40,000 - $59,999','$60,000 - $79,999',
+                                    '$80,000 - $99,999','$100,000 or more')),
+         diabetes = factor(diabetes, 
+                           levels = c(2, 1, 3), 
+                           labels = c('No','Yes','Prediabetes')),
+         cholesterol = factor(cholesterol, 
+                              levels = c(2, 1), 
+                              labels = c('Low value','High value')),
+         drinkcat = factor(drink >= 1, 
+                        labels = c('<1 / wk', '1+ / week')),
+         smoking = factor(smoking, 
+                          levels=c(3:1), 
+                          labels = c('Current smoker','Former smoker','Never smoker')),
+         hypertension = factor(hypertension, 
+                               levels = c(2, 1), 
+                               labels = c('No','Yes'))
+  ) %>% 
+    drop_na(hypertension) 
+
+hy_p_df <- 
+  hy_df %>%
+  drop_na()
+
+g1 <- svyglm(hypertension ~ diabetes + cholesterol + born + age + race + diet + income + bmi + gender + smoking,
+              family = quasibinomial(link = 'logit'), 
+             design = hypertension_design)
+
+g1_res <- tidy(g1, exponentiate = TRUE, conf.int = TRUE)
+g1_res <- cbind(g1_res, confint(g1))
+
+### unweighted logistic regression
+g1_noWt <- glm(hypertension ~ diabetes + cholesterol + born + age + race + diet + income + bmi + gender + smoking,
+              family = quasibinomial(link = 'logit'), data=hy_p_df)
+
+g1_noWt_res <- tidy(g1_noWt, exponentiate = TRUE, conf.int = TRUE)
+g1_noWt_res <- cbind(g1_noWt_res, confint(g1_noWt))
+
+g1_res <- g1_res %>% mutate(method="Weighted")
+g1_noWt_res <- g1_noWt_res %>% mutate(method="Unweighted")
+
+g1_both<-rbind(g1_res, g1_noWt_res)
+
+g1_both <- g1_both %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term = recode(term, 
+                  "age" = "Age", 
+                  "bmi" = "Body Mass Index", 
+                  "genderFemale" = "Female",
+                  "raceBlack/African American" = "Black/African American",
+                  "raceIndian /Alaska Native" = "Indian/Alaska Native",
+                  "racePacific Islander" = "Pacific Islander",
+                  "raceAsian" = "Asian",
+                  "raceOther Race" = "Other Race",
+                  "cholesterolHigh value" = "Cholesterol Status",
+                  "diabetesYes" = "Diabtes Status",
+                  "diabetesPrediabetes" = "Prediabetes",
+                  "bornNon-US Born" = "Born Status",
+                  "smokingFormer smoker" = "Former Smoker",
+                  "smokingNever smoker" = "Never Smoker",
+                  "dietFair" = "Fair diet",
+                  "dietGood" = "Good diet",
+                  "dietVery good" = "Very Good diet",
+                  "dietExcellent" = "Excellent diet",
+                  "smoking" = "Smoking Status"))
+
+ g1_both %>% ggplot(aes(x = estimate, y = term),
+     group_by(g1_both$method)) +
+     geom_vline(xintercept = 0, linetype = "dashed") +
+     geom_errorbarh(aes(estimate, term, xmin = `2.5 %`, 
+     xmax = `97.5 %`, color = factor(method)), linewidth = 0.8)+
+     geom_point(aes(color = factor(method),
+                    shape = factor(method)),size = 3)+
+    theme(axis.title.x = element_blank(),
+    axis.title.y = element_blank()) +
+    ggtitle(expression(atop(bold("95% condfidence interval"))))+
+   theme_minimal()
+
+```
+
+#### Example 2
+
+
+```{r example2, echo=FALSE}
+
+rename <- dat %>% 
+  select(id = KEY,
+         age = SPAGE,
+         race = DMQ_14_1,
+         gender = GENDER,
+         born = US_BORN,
+         diet = DBQ_1,
+         income = INC20K,
+         diabetes = DIQ_1,
+         bmi = BMI,
+         insurance = HIQ_1,
+         cholesterol = BPQ_16,
+         drinkfreq = ALQ_1,
+         drinkunit = ALQ_1_UNIT,
+         smoking = SMOKER3CAT,
+         hypertension = BPQ_2,
+         surveyweight = EXAM_WT)
+
+rename <- rename %>% 
+  mutate(drink_denom = case_when(drinkfreq == 0 | drinkunit == 1 ~ 1,
+                                   drinkunit == 2 ~ 52 / 12,
+                                   drinkunit == 3 ~ 52),
+         drink = drinkfreq / drink_denom)
+
+
+hy_df <- rename %>% 
+  mutate(race = factor(race, 
+                       levels = c(100, 110, 120, 140, 180, 250), 
+                       labels = c('White', 'Black/African American', 
+                                  'Indian /Alaska Native', 
+                                  'Pacific Islander', 
+                                  'Asian', 'Other Race')),
+         gender = factor(gender, 
+                         levels = c(1, 2), 
+                         labels = c('Male', 'Female')),
+         born = factor(born, 
+                       levels = c(1, 2),
+                       labels = c("US Born", "Non-US Born")),
+         diet = factor(diet, 
+                       levels = c(5:1), 
+                       labels = c('Poor', 'Fair', 'Good', 
+                                  'Very good','Excellent')),
+         income = factor(income, 
+                         levels = c(1:6), 
+                         labels = c('Less than $20,000','$20,000 - $39,999',
+                                    '$40,000 - $59,999','$60,000 - $79,999',
+                                    '$80,000 - $99,999','$100,000 or more')),
+         diabetes = factor(diabetes, 
+                           levels = c(2, 1, 3), 
+                           labels = c('No','Yes','Prediabetes')),
+         insurance = factor(insurance,
+                            levels = c(2, 1),
+                            labels = c('No','Yes')),
+         cholesterol = factor(cholesterol, 
+                              levels = c(2, 1), 
+                              labels = c('Low value','High value')),
+         drinkcat = factor(drink >= 1, 
+                        labels = c('<1 / wk', '1+ / week')),
+         smoking = factor(smoking, levels=c(1,3,2), 
+                         labels=c('Never smoker','Former smoker','Current smoker')),
+         hypertension = factor(hypertension, 
+                               levels = c(2, 1), 
+                               labels = c('No','Yes'))
+  ) 
+
+
+#specify survey design
+hp_design <- svydesign(ids = ~1,weights = ~hy_df$surveyweight,data = hy_df)
+
+#subset complete cases (not missing any variables)
+hp_design_dna <- subset(hp_design, complete.cases(hy_df))
+
+#fit logistic regression model
+
+modl2 <- svyglm(hypertension ~
+                  income + insurance + age + race + gender + bmi + cholesterol + diabetes, family = binomial(link = 'logit'), 
+             design = hp_design_dna)
+
+#show regression results
+modl2_res <- tidy(modl2, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95) %>% mutate(Model = "Weighted")
+
+#unweighted logistic regression
+modl_unweight <- glm(hypertension ~
+                  income + insurance + age + race + gender + bmi + cholesterol + diabetes,
+                family=binomial(link="logit"),
+                data=hy_df)
+#show regression results
+modl_unweight_res <- tidy(modl_unweight, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95) %>% mutate(Model = "Unweighted")
+
+
+#compare weighted vs. unweighted results
+# Combine both results into one data frame
+modl_compare <- bind_rows(modl2_res, modl_unweight_res)
+
+# Plot
+ggplot(modl_compare, aes(x = estimate, y = term, color = Model, shape = Model)) +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), position = position_dodge(width = 0.5)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  scale_x_log10() +  # Log scale for odds ratios
+  geom_vline(xintercept = 1, linetype = "dashed") + 
+  labs(title = "95% CI for Weighted vs Unweighted Models",
+       x = "Odds Ratio",
+       y = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "right")
+
+```
+
+#### Example 3
+
+```{r example3, echo = FALSE}
+rename <- dat %>% 
+  select(id = KEY,
+         age = SPAGE,
+         race = DMQ_14_1,
+         gender = GENDER,
+         born = US_BORN,
+         diet = DBQ_1,
+         income = INC20K,
+         diabetes = DIQ_1,
+         bmi = BMI,
+         cholesterol = BPQ_16,
+         drinkfreq = ALQ_1,
+         drinkunit = ALQ_1_UNIT,
+         smoking = SMOKER3CAT,
+         hypertension = BPQ_2,
+         surveyweight = EXAM_WT,
+         insurance = HIQ_1,
+         activity = SR_ACTIVE)
+
+rename <- rename %>% 
+  mutate(drink_denom = case_when(drinkfreq == 0 | drinkunit == 1 ~ 1,
+                                   drinkunit == 2 ~ 52 / 12,
+                                   drinkunit == 3 ~ 52),
+         drink = drinkfreq / drink_denom)
+
+
+hy_df <- rename %>% 
+  mutate(race = factor(race, 
+                       levels = c(100, 110, 120, 140, 180, 250), 
+                       labels = c('White', 'Black/African American', 
+                                  'Indian /Alaska Native', 
+                                  'Pacific Islander', 
+                                  'Asian', 'Other Race')),
+         gender = factor(gender, 
+                         levels = c(1, 2), 
+                         labels = c('Male', 'Female')),
+         born = factor(born, 
+                       levels = c(1, 2),
+                       labels = c("US Born", "Non-US Born")),
+         diet = factor(diet, 
+                       levels = c(5:1), 
+                       labels = c('Poor', 'Fair', 'Good', 
+                                  'Very good','Excellent')),
+         income = factor(income, 
+                         levels = c(1:6), 
+                         labels = c('Less than $20,000','$20,000 - $39,999',
+                                    '$40,000 - $59,999','$60,000 - $79,999',
+                                    '$80,000 - $99,999','$100,000 or more')),
+         diabetes = factor(diabetes, 
+                           levels = c(2, 1, 3), 
+                           labels = c('No','Yes','Prediabetes')),
+         cholesterol = factor(cholesterol, 
+                              levels = c(2, 1), 
+                              labels = c('Low value','High value')),
+         drinkcat = factor(drink >= 1, 
+                        labels = c('<1 / wk', '1+ / week')),
+         
+         smoking = factor(smoking, levels=c(1,3,2), 
+                         labels=c('Never smoker','Former smoker','Current smoker')),
+         
+         hypertension = factor(hypertension, 
+                               levels = c(2, 1), 
+                               labels = c('No','Yes')),
+         insurance = factor(insurance,
+                            levels = c(2,1),
+                            labels = c('No','Yes')),
+         activity = factor(activity,
+                           levels = c(1,2,3),
+                           labels = c('Very Active', 'Somewhat Active', 'Not Very Active/Not Active At All'))
+  ) 
+
+hy_p_df <- 
+  hy_df %>%
+  drop_na() # create an independent dataset that drops all the NA values
+
+new_names <- c(
+  "age" = "Age",
+  "raceBlack/African American" = "Black/African American",
+  "raceIndian /Alaska Native" = "Indian/Alaska Native",
+  "racePacific Islander" = "Pacific Islander",
+  "raceAsian" = "Asian",
+  "raceOther Race" = "Other Race",
+  "genderFemale" = "Female",
+  "dietFair" = "Fair Diet",
+  "dietGood" = "Good Diet",
+  "dietVery good" = "Very Good Diet",
+  "dietExcellent" = "Excellent Diet",
+  "income$20,000 - $39,999" = "$20,000 - $39,999",
+  "income$40,000 - $59,999" = "$40,000 - $59,999",
+  "income$60,000 - $79,999" = "$60,000 - $79,999",
+  "income$80,000 - $99,999" = "$80,000 - $99,999",
+  "income$100,000 or more" = "$100,000 or more",
+  "diabetesYes" = "Have Diabetes",
+  "diabetesPrediabetes" = "Have Prediabetes",
+  "bmi" = "BMI",
+  "cholesterolHigh value" = "High Cholesterol Value",
+  "smokingFormer smoker" = "Former Smoker", 
+  "smokingCurrent smoker" = "Current Smoker", 
+  "activitySomewhat Active" = "Somewhat Physically Active",
+  "activityNot Very Active/Not Active At All" = "Not Very Physically Active/Not Active At All",
+  "insuranceYes" = "Have Insurance"
+)
+
+
+# Specify the design 
+hypertension_design <- svydesign(
+  ids = ~1,
+  weights = ~hy_df$surveyweight,
+  data = hy_df
+)
+
+# Drop NA data in the survey weight outputs
+h_design_nona <- subset(hypertension_design, complete.cases(hy_df))
+
+## Logistic Regression Model based on Survey Weights
+g1 <- svyglm(hypertension ~ 
+               age + race + gender + diet + income + 
+               diabetes + bmi + cholesterol + smoking + activity + insurance,
+             family = quasibinomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_res <- tidy(g1, exponentiate = TRUE)
+
+# Specify the design 
+hypertension_design <- svydesign(
+  ids = ~1,
+  weights = ~hy_df$surveyweight,
+  data = hy_df
+)
+
+## Logistic Regression Model (Unweighted)
+g1_noWt <- glm(hypertension ~ 
+               age + race + gender + diet + income + 
+               diabetes + bmi + cholesterol + smoking + activity + insurance,
+             family = quasibinomial(link = 'logit'), data = hy_p_df)
+g1_res_noWt <- tidy(g1_noWt, exponentiate = TRUE)
+
+
+
+# Combine the two results into one dataframe
+g1_res_clean <- g1_res %>% 
+  select(term, estimate, p.value) %>%
+  mutate(method = "Weighted")
+
+g1_noWt_res_clean <- g1_res_noWt %>% 
+  select(term, estimate, p.value) %>%
+  mutate(method = "Unweighted")
+
+g1_both<-rbind(g1_res_clean, g1_noWt_res_clean)
+
+# Compare the differences using the two models using a data visualization
+# Calculate the confidence intervals 
+g1_both <- g1_both %>%
+  mutate(
+    ci_lower = estimate - 1.96 * (case_when(
+      method == "Weighted" ~ g1_res$std.error[match(term, g1_res$term)],
+      method == "Unweighted" ~ g1_res_noWt$std.error[match(term, g1_res_noWt$term)]
+    )),
+    ci_upper = estimate + 1.96 * (case_when(
+      method == "Weighted" ~ g1_res$std.error[match(term, g1_res$term)],
+      method == "Unweighted" ~ g1_res_noWt$std.error[match(term, g1_res_noWt$term)]
+    ))
+  )
+
+# Group variables by category
+category_order <- c(
+  # Demographics
+  "Age", "Female", 
+  # Race/Ethnicity 
+  "Black/African American", "Indian/Alaska Native", "Pacific Islander", "Asian", "Other Race",
+  # Socioeconomic
+  "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 or more", "Have Insurance",
+  # Health Conditions
+  "BMI", "Have Diabetes", "Have Prediabetes", "High Cholesterol Value",
+  # Behaviors
+  "Fair Diet", "Good Diet", "Very Good Diet", "Excellent Diet",
+  "Former Smoker", "Current Smoker",
+  "Somewhat Physically Active", "Not Very Physically Active/Not Active At All"
+)
+
+# Create the plot with the calculated CIs
+g1_both %>% 
+  filter(term != "(Intercept)") %>%  
+  mutate(Variable = ifelse(term %in% names(new_names), 
+                          new_names[match(term, names(new_names))], 
+                          term)) %>%
+  ggplot(aes(x = estimate, y = factor(Variable, levels = category_order))) +
+  geom_vline(xintercept = 1, linetype = "dashed") +  
+  geom_errorbarh(aes(xmin = ci_lower, xmax = ci_upper, color = method), linewidth = 0.8, position = position_dodge(width = 0.5)) +
+  geom_point(aes(color = method, shape = method), size = 3, position = position_dodge(width = 0.5)) +
+  theme_minimal() +
+  labs(
+    x = "Odds Ratio",
+    y = "",
+    title = "95% Confidence Intervals for Weighted vs Unweighted Models", 
+    color = "Model Type",
+    shape = "Model Type"
+  ) +
+  scale_x_log10() +
+  theme(
+    plot.title = element_text(hjust = 0.5)  # This centers the title
+  )
+
+```
+
+
+#### Example 4
+
+How do you think the variables on this plot are ordered? 
+
+```{r example4, echo= FALSE}
+dat <- read_sas('./module_2/data/d.sas7bdat')
+rename <- 
+  dat %>% 
+    select(id = KEY,
+           age = SPAGE,
+           race = DMQ_14_1,
+           gender = GENDER,
+           born = US_BORN,
+           diet = DBQ_1,
+           income = INC20K,
+           diabetes = DIQ_1,
+           bmi = BMI,
+           cholesterol = BPQ_16,
+           drink = ALQ_1_UNIT,
+           smoking = SMOKER3CAT,
+           hypertension = BPQ_2,
+           surveyweight = CAPI_WT)
+
+rename <- rename %>% 
+          mutate(drink = ifelse(dat$ALQ_1 == 0, 4, drink))
+
+hy_df <- rename %>% mutate(race=factor(race, levels=c(100, 110, 120, 140, 180, 250), 
+                      labels=c('White', 'Black/African American', 
+                              'Indian /Alaska Native', 
+                              'Pacific Islander', 
+                              'Asian', 'Other Race')),
+                     gender = factor(gender, levels=c(1,2), 
+                        labels=c('Male', 'Female')),
+                     born = factor(born, levels = c(1,2),
+                        labels = c("US Born", "Non-US Born")),
+                     diet = factor(diet, levels=c(5:1), 
+                      labels=c('Poor', 'Fair', 'Good', 
+                               'Very good','Excellent')),
+                     income = factor(income, levels=c(1:6), 
+                        labels=c('Less than $20,000','$20,000 - $39,999',
+                                 '$40,000 - $59,999','$60,000 - $79,999',
+                                 '$80,000 - $99,999','$100,000 or more')),
+                     diabetes = factor(diabetes, levels=c(2,3, 1), 
+                          labels=c('No','Prediabetes','Yes')),
+                     cholesterol = factor(cholesterol, levels=c(2,1), 
+                             labels=c('Low value','High value')),
+                     drink = factor(drink, levels=c(4:1), 
+                       labels=c('Never','Yearly', 'Monthly', 'Weekly')),
+                     smoking = factor(smoking, levels=c(1,3,2), 
+                                      labels=c('Never smoker','Former smoker','Current smoker')),
+                     hypertension = factor(hypertension, levels=c(2,1), 
+                              labels=c('No','Yes'))
+                     )
+hy_p_df <- 
+  hy_df %>%
+  drop_na()
+
+
+
+hypertension_design <- svydesign(
+  ids = ~1,
+  weights = ~hy_df$surveyweight,
+  data = hy_df
+)
+
+h_design_nona <- subset(hypertension_design, complete.cases(hy_df))
+
+g1 <- svyglm(hypertension ~ 
+               age + gender + diet + diabetes + cholesterol,
+             family = quasibinomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_results <- tidy(g1,
+                exponentiate = TRUE,
+                conf.int = TRUE)
+
+g1_res <- tidy(g1, 
+                conf.int = TRUE)
+
+g1_results$term <- c("Intercept", 
+                    "Age", 
+                    "Gender", 
+                    "Fair Diet", 
+                    "Good Diet", 
+                    "Very Good Diet", 
+                    "Excellent Diet", 
+                    "Pre-Diabetes", 
+                    "Diabetes", 
+                    "High Cholesterol")
+
+g1_res$term <- c("Intercept", 
+                  "Age", 
+                  "Gender", 
+                  "Fair Diet", 
+                  "Good Diet", 
+                  "Very Good Diet", 
+                  "Excellent Diet", 
+                  "Pre-Diabetes", 
+                  "Diabetes", 
+                  "High Cholesterol")
+
+g1_noWt <- glm(hypertension ~ 
+               age + gender + diet + diabetes + cholesterol,
+              family = quasibinomial(link = 'logit'), data=hy_p_df)
+
+g1_noWt_results <- tidy(g1_noWt,
+                        exponentiate = TRUE,
+                        conf.int = TRUE)
+
+g1_noWt_res <- tidy(g1_noWt, 
+                    conf.int = TRUE)
+
+g1_noWt_results$term <- c("Intercept", 
+                      "Age", 
+                      "Gender", 
+                      "Fair Diet", 
+                      "Good Diet", 
+                      "Very Good Diet", 
+                      "Excellent Diet", 
+                      "Pre-Diabetes", 
+                      "Diabetes", 
+                      "High Cholesterol")
+
+g1_noWt_res$term <- c("Intercept", 
+                      "Age", 
+                      "Gender", 
+                      "Fair Diet", 
+                      "Good Diet", 
+                      "Very Good Diet", 
+                      "Excellent Diet", 
+                      "Pre-Diabetes", 
+                      "Diabetes", 
+                      "High Cholesterol")
+
+g1_res <- g1_results %>% mutate(Method="Weighted")
+g1_noWt_res <- g1_noWt_results %>% mutate(Method="Unweighted")
+g_both <- rbind(g1_res, g1_noWt_res)
+
+comparedgraph <- g_both %>%
+  filter(term != "Intercept") %>%
+  ggplot(aes(x = estimate, y = fct_reorder(term, estimate), color = Method)) +
+  geom_vline(xintercept = 1,
+             linetype = "dashed") +
+  geom_errorbarh(aes(xmin = conf.low, 
+                     xmax = conf.high),
+                 height = 0.5,
+                     linewidth = 0.8) +
+  geom_point(aes(color = factor(Method), size = 3) +
+  scale_color_manual(values = c("#0072B2", "#f08080"))) +
+  scale_shape_manual(values = c(19, 17)) +
+  theme_minimal() +
+  labs(title = "Comparison of Survey-Weighted and Non-Survery Weighted Regression Analysis",
+       y = "Variable",
+       x = "Odds Ratio Estimate",
+       caption = "Figure 4: Odds Ratio Estimates of Survey-Weighted and Non-Survery-Weighted Regression Analysis"
+      )
+
+comparedgraph 
+
+```
+
+
+#### Example 5
+
+This example uses a function from the `jtools` package, which you can read more about [here](https://jtools.jacob-long.com){target="_blank"}. We also need to install the `ggstance` and `broom.mixed` packages to get this to work without an error. This function is powerful, but does sweep some things under the rug, so you might want to be careful using it. Once you have discussed how to improve the plot, see if you can figure out an additional argument to pass to the function to improve it.
+
+```{r example5, echo = FALSE}
+library(jtools)
+plot_summs(g1, g1_noWt, scale = TRUE, model.names = c("Survey-Weighted", "Non Survey-Weighted"))
+```
+
+
+
+
+### An alternative: example tables
+
+We know how to create nice tables of the model outputs from each method on its own.
+
+```{r exampletable1}
+### survey-weighted logistic regression
+g1 <- svyglm(hypertension ~ 
+               bmi + age + cholesterol + income + 
+               diabetes,
+              family = quasibinomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_res <- tidy(g1, exponentiate = TRUE, conf.int = TRUE)
+```
+
+
+```{r exampletable2}
+pander(g1_res)
+```
+
+We then want to fit the same model using un-weighted logistic regression: 
+
+```{r exampletable3}
+### unweighted logistic regression
+g1_noWt <- glm(hypertension ~ 
+               bmi + age + cholesterol + income + 
+               diabetes,
+              family = quasibinomial(link = 'logit'), data=hy_p_df)
+
+g1_noWt_res <- tidy(g1_noWt, exponentiate = TRUE, conf.int = TRUE)
+pander(g1_noWt_res)
+```
+
+
+Now that we have both versions of the results, we can work on combining them in different ways to make some tables.
+
+A couple of you posted an example of a table comparison on Piazza [here](https://piazza.com/class/lrh8j0ur7id7kt/post/42_f2){target="_blank"}, [here](https://piazza.com/class/lrh8j0ur7id7kt/post/42_f8){target="_blank"}  and [here](https://piazza.com/class/lrh8j0ur7id7kt/post/42_f6){target="_blank"}. What are some things that work well or could be improved with this set of tables?
+
+To show the results in the same table, we want to start by joining the results from the two tables.
+```{r examplejoin}
+g1_join <- inner_join(g1_res, g1_noWt_res, by = "term", suffix = c(".Wt", ".noWt"))
+```
+
+
+This example includes some nice grouped labels for the weighted and unweighted results, using the `add_header_above` function from `kableExtra`:
+
+```{r exampletable4}
+tblcap.3 <- "Table 3: Comparison of weighted and unweighted results"
+comp_tbl <- g1_join %>%
+  select(term, `OR` = `estimate.Wt`,`Std Error` = `std.error.Wt`, `p-value` = `p.value.Wt`, `OR ` = `estimate.noWt`, `Std Error ` = `std.error.noWt`, `p-value ` = `p.value.noWt`) %>% 
+  kable(format = "html",
+        digits = 2,
+        caption = tblcap.3) %>%
+  add_header_above(c(" ","Survey Weighted" = 3, "Non-weighted" = 3))%>%
+  kable_styling(full_width = TRUE)
+
+comp_tbl
+
+```
+
+One thing I would like to improve about this table is the way the p-values are displayed as 0's. There are several approaches to changing this; I am showing one here using the `formatC` function.  You can see some further examples of how to play around with this [here](https://stackoverflow.com/questions/39623636/forcing-r-output-to-be-scientific-notation-with-at-most-two-decimals){target="_blank"}.
+
+
+```{r exampletable5}
+tblcap.3 <- "Table 3: Comparison of weighted and unweighted results"
+comp_tbl <- g1_join %>%
+  mutate(p.value.Wt = formatC(p.value.Wt, digits = 2, format = "g"), p.value.noWt = formatC(p.value.noWt, digits = 2, format = "g")) %>% 
+  select(term, `OR` = `estimate.Wt`,`Std Error` = `std.error.Wt`, `p-value` = `p.value.Wt`, `OR ` = `estimate.noWt`, `Std Error ` = `std.error.noWt`, `p-value ` = `p.value.noWt`) %>% 
+  kable(format = "html",
+        digits = 2,
+        caption = tblcap.3) %>%
+  add_header_above(c(" ","Survey Weighted" = 3, "Non-weighted" = 3))%>%
+  kable_styling(full_width = TRUE)
+
+comp_tbl
+
+```
+
+Here is a similar example that also includes a difference in the odds ratios:
+
+```{r exampletable6, echo = FALSE}
+
+g_join <- inner_join(g1_results, g1_noWt_results, by = "term", suffix = c(".Wt", ".noWt"))
+
+combinetable <- g_join %>%
+  filter(term != "Intercept") %>%
+  mutate(conf.Wt = paste0("(", round(conf.low.Wt, 2), ", ", round(conf.high.Wt, 2), ")")) %>%
+  mutate(conf.noWt = paste0("(", round(conf.low.noWt, 2), ", ", round(conf.high.noWt, 2), ")")) %>%
+  mutate(p.valueSN.Wt = formatC(p.value.Wt, digits = 2, format = "e")) %>%
+  mutate(p.valueSN.noWt = formatC(p.value.noWt, digits = 2, format = "e")) %>%
+  select(Term = term,
+         `Odds Ratio` = `estimate.Wt`,
+         `P-Value` = `p.valueSN.Wt`,
+         `95% Confidence Interval` = conf.Wt,
+         `Odds Ratio ` = `estimate.noWt`,
+         `P-Value ` = `p.valueSN.noWt`,
+         `95% Confidence Interval ` = conf.noWt) %>%
+  mutate(Difference = abs(`Odds Ratio` - `Odds Ratio `)) %>%
+  kable(format = "html",
+        digits = 3,
+        caption = "Table 3: Comparison of Weighted and Unweighted Modeling Results",) %>%
+  add_header_above(c("", "Survery Weighted" = 3, "Non-Weighted" = 3, " ")) %>%
+  kable_styling(full_width = TRUE)
+
+combinetable
+
+```
+ 
+
+
+There is another package that makes really nice looking tables, the package `gtsummary`, with the function `tbl_regression`. It is a little fidgety with the variable names for some reason, but the tables also include the baseline levels of the variables, for example, which is quite useful. There is a tutorial about how to use this package [here](https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html){target="_blank"}.
+
+```{r examplegt}
+library(gtsummary)
+
+tbl1<-tbl_regression(g1, exponentiate = TRUE, label = list(age = "age", bmi = "bmi"))%>%
+  bold_labels()%>%
+  bold_p()
+
+
+tbl2<-tbl_regression(g1_noWt, exponentiate=TRUE, label = list(age = "age", bmi = "bmi"))%>%
+  bold_labels()%>%
+  bold_p()
+
+tbl_merged <-
+  tbl_merge(
+    tbls = list(tbl1, tbl2),
+    tab_spanner = c("**Survey Weighted**", "**Unweighted**")
+  )
+
+tbl_merged
+
+```
+
+## Example of reordering factor levels
+
+
+```{r fctreorderex1, echo=FALSE}
+
+dat <- read_sas('./module_2/data/d.sas7bdat')
+
+
+rename <- dat %>% 
+  select(id = KEY,
+         age = SPAGE,
+         race = DMQ_14_1,
+         gender = GENDER,
+         born = US_BORN,
+         diet = DBQ_1,
+         income = INC20K,
+         diabetes = DIQ_1,
+         bmi = BMI,
+         cholesterol = BPQ_16,
+         drinkfreq = ALQ_1,
+         drinkunit = ALQ_1_UNIT,
+         smoking = SMOKER3CAT,
+         hypertension = BPQ_2,
+         surveyweight = EXAM_WT)
+
+rename <- rename %>% 
+  mutate(drink_denom = case_when(drinkfreq == 0 | drinkunit == 1 ~ 1,
+                                   drinkunit == 2 ~ 52 / 12,
+                                   drinkunit == 3 ~ 52),
+         drink = drinkfreq / drink_denom)
+
+
+hy_df <- rename %>% 
+  mutate(race = ifelse(race == 120 | race == 140, 250, race),
+         race=factor(race, levels=c(100, 110, 180, 250), 
+                      labels=c('White', 'Black/African American', 
+                              'Asian', 'Other Race')),
+         gender = factor(gender, 
+                         levels = c(1, 2), 
+                         labels = c('Male', 'Female')),
+         born = factor(born, 
+                       levels = c(1, 2),
+                       labels = c("US Born", "Non-US Born")),
+         diet = factor(diet, 
+                       levels = c(5:1), 
+                       labels = c('Poor', 'Fair', 'Good', 
+                                  'Very good','Excellent')),
+         income = factor(income, 
+                         levels = c(1:6), 
+                         labels = c('Less than $20,000','$20,000 - $39,999',
+                                    '$40,000 - $59,999','$60,000 - $79,999',
+                                    '$80,000 - $99,999','$100,000 or more')),
+         diabetes = factor(diabetes, 
+                           levels = c(2, 1, 3), 
+                           labels = c('No','Yes','Prediabetes')),
+         cholesterol = factor(cholesterol, 
+                              levels = c(2, 1), 
+                              labels = c('Low value','High value')),
+         drinkcat = factor(drink >= 1, 
+                        labels = c('<1 / wk', '1+ / week')),
+         smoking = factor(smoking, levels=c(1,3,2), 
+                         labels=c('Never smoker','Former smoker','Current smoker')),
+         hypertension = factor(hypertension, 
+                               levels = c(2, 1), 
+                               labels = c('No','Yes'))
+  ) 
+
+
+hy_p_df <- 
+  hy_df %>%
+  drop_na()
+
+hypertension_design <- svydesign(
+  id = ~1,
+  weights = ~hy_df$surveyweight,
+  data = hy_df
+)
+h_design_nona <- subset(hypertension_design, complete.cases(hy_df))
+
+
+g1 <- svyglm(hypertension ~ 
+               age + race + income + 
+               diabetes + cholesterol,
+             family = binomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_res <- tidy(g1, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95) %>% 
+  filter(term != "(Intercept)")  
+### unweighted logistic regression
+g1_noWt <- glm(hypertension ~ 
+               age + race + income + 
+               diabetes + cholesterol,
+              family = quasibinomial(link = 'logit'), data=hy_p_df)
+
+g1_noWt_res <- tidy(g1_noWt, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95) %>% 
+  filter(term != "(Intercept)") 
+
+
+#combine these two results into one data frame
+g1_res <- g1_res %>% mutate(method="Weighted")
+g1_noWt_res <- g1_noWt_res %>% mutate(method="Unweighted")
+g1_both<-rbind(g1_res, g1_noWt_res)
+
+#rename estimate as odds ratio
+names(g1_both)[names(g1_both) == "estimate"] <- "odds.ratio"
+
+
+#data visualizations comparing the results separating categorical and continuous variables 
+g1_both %>% 
+  ggplot(aes(x = odds.ratio, y = term), group_by(method)) +
+     geom_vline(xintercept = 1, linetype = "dashed") +
+     geom_errorbarh(aes(y=term, xmin = conf.low, 
+     xmax = conf.high, color = method), linewidth = 0.8, position="dodge")+
+     geom_point(aes(color = method,
+                    shape = method), size = 3, position=position_dodge(width=0.9))+
+  labs(title = "hypertension weighted vs unweighted logistic regression", 
+       subtitle = "odds ratio with 95% confidence interval for categorical terms") + 
+  xlab("odds ratio") +
+  ylab("categorical terms")
+
+
+#data visualizations comparing the results separating categorical and continuous variables 
+g1_both %>% 
+  ggplot(aes(x = odds.ratio, y = fct_reorder(term, odds.ratio))) +
+     geom_vline(xintercept = 1, linetype = "dashed") +
+     geom_errorbarh(aes(xmin = conf.low, 
+     xmax = conf.high, color = method), linewidth = 0.8, position="dodge")+
+     geom_point(aes(color = method,
+                    shape = method), size = 3, position=position_dodge(width=0.9))+
+  labs(title = "hypertension weighted vs unweighted logistic regression", 
+       subtitle = "odds ratio with 95% confidence interval for categorical terms") + 
+  xlab("odds ratio") +
+  ylab("categorical terms")
+
+
+
+```
+
+How do we improve the term labels while making sure the order is what we want it to be?
+
+```{r fctreorderex2}
+g1_both <- g1_both %>% mutate(term = sub("age", "Age", term), 
+                              term = sub("race", "Race: ", term),
+                              term = sub("income", "Income: ", term),
+                              term = sub("diabetes", "Diabetes: ", term),
+                              term = sub("cholesterol", "Cholesterol: ", term))
+
+#data visualizations comparing the results separating categorical and continuous variables 
+g1_both %>% 
+  ggplot(aes(x = odds.ratio, y = factor(term, levels = term, labels = term))) +
+     geom_vline(xintercept = 1, linetype = "dashed") +
+     geom_errorbarh(aes(xmin = conf.low, 
+     xmax = conf.high, color = method), linewidth = 0.8, position="dodge")+
+     geom_point(aes(color = method,
+                    shape = method), size = 3, position=position_dodge(width=0.9))+
+  labs(title = "hypertension weighted vs unweighted logistic regression", 
+       subtitle = "odds ratio with 95% confidence interval for categorical terms") + 
+  xlab("odds ratio") +
+  ylab("categorical terms")
+
+
+```
+
+## Scientific writing for your reports
+
+Read the Methods and Results section of one of the two JAMA articles included in the class materials repository today. What do you observe about what is contained in each section? What can we say about the use of numeric support and the way statistical significance is treated?
+
+
+## Model selection and survey weighting
+
+We have talked about a couple approaches to model selection, including looking at statistical significance of variables and using the AIC. As we are combining our survey-weighting with model comparisons, it is a little tricky, since the weights we use depend on what variables are included in the model. And to use the AIC, we need to be using the same data set, i.e., including the same weights and data observations for any data sets we are comparing. This may require some fiddling to get it right.
+
+Remember that the weight variable that you use will depend on the set of variables that will be included in your final model. You may need to revisit this choice depending on what your final model is.
+
+Are there any questions/comments/concerns about model selection and survey-weighting?
+
+
+## Another example of using inline R code
+
+
+
+```{r inlinecode1}
+### survey-weighted logistic regression -- not including age
+g1 <- svyglm(hypertension ~ 
+               bmi + cholesterol + income + 
+               diabetes,
+              family = quasibinomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_res <- tidy(g1, exponentiate = TRUE, conf.int = TRUE)
+pander(g1_res)
+```
+
+Suppose I wanted to write some sentences to summarize what this model output is telling us. I could run the code, look at the numbers, and then type them here:
+
+For example:
+Holding all other variables constant, a one-unit increase in BMI is associated with a 7.4% increase in the odds of hypertension (p-value 1.69x10-6, 95% CI 4.3-10.5%). 
+
+Instead of running the code and copying the numbers from the output, you could pull them directly from the R objects using code:
+Holding all other variables constant, a one-unit increase in age is associated with  `r round(100*(g1_res %>% filter(term == "bmi") %>% pull(estimate)) - 100,1)`% increase in the odds of hypertension (p-value `r format(g1_res %>% filter(term=="bmi") %>% pull(p.value), digits=3)`, 95% CI `r round(100*(g1_res %>% filter(term=="bmi") %>% pull(conf.low))-100,1)`-`r round(100*(g1_res %>% filter(term=="bmi") %>% pull(conf.high))-100,1)`%). 
+
+Although you can't see it in the knitted document, this second paragraph does not contain the numbers themselves, but R code to generate and format the numbers that should be included in the model write-up. For example, to generate the percent increase, the code is: `round(100*(g1_res %>% filter(term == "bmi") %>% pull(estimate)) - 100,1)`. And to generate the p-value, it is `format(g1_res %>% filter(term=="bmi") %>% pull(p.value), digits=3)`.
+
+
+Why is this useful? 
+
+* It is not susceptible to typos, i.e., copying and pasting the wrong numbers.
+* It is easy to update, for example, if you fit a new model. Suppose you realize that you actually meant to include age as a covariate. 
+
+```{r inlinecode2}
+### survey-weighted logistic regression -- not including bmi
+g1 <- svyglm(hypertension ~ 
+               age + bmi + cholesterol + income + 
+               diabetes,
+              family = quasibinomial(link = 'logit'), 
+             design = h_design_nona)
+
+g1_res <- tidy(g1, exponentiate = TRUE, conf.int = TRUE)
+pander(g1_res)
+
+
+```
+
+If I had hard-coded numbers into my output summary, I would have to go back and re-write and double check the numbers. But if I have used code, the same code will just give me updated results:
+
+Holding all other variables constant, a one-unit increase in age is associated with  `r round(100*(g1_res %>% filter(term == "bmi") %>% pull(estimate)) - 100,1)`% increase in the odds of hypertension (p-value `r format(g1_res %>% filter(term=="bmi") %>% pull(p.value), digits=3)`, 95% CI `r round(100*(g1_res %>% filter(term=="bmi") %>% pull(conf.low))-100,1)`-`r round(100*(g1_res %>% filter(term=="bmi") %>% pull(conf.high))-100,1)`%). 
+
+A few tips to make things easier:
+
+* You will probably want to save your model output and/or some processed versions in R objects that you can easily refer to in your inline code, like `g1_res` above.
+* You should try to use variable names and the tidyverse piping commands as much as possible, rather than indexing into specific rows or columns of your output. For example, if you had written code referring to `age` as the third variable in the model (for example using `g1_res[3, 2]` to access the odds ratio), this would be incorrect in the new model, where `age` is included before `bmi`.
+
+You can create whatever output you want in your R code and refer back to it using inline code:
+```{r inlinecode3}
+foo <- "this is a test"
+```
+
+Print `r foo`.
+
+
+## A few general comments as you work toward Module 2 final project
+
+* In general, aim to include more numeric values, both in your summaries of your data visualizations and in your interpretations of your model results. 
+* Remember that best practices would be to include only those variables that you will use in your model in the final data set that you include in your analysis. This is in order to reduce the number of observations lost due to missing data. Once you have decided on your final model, I would suggest going back to the beginning and adjusting your code to achieve this. This is also a good time to double check that you are using the appropriate variable for your survey weighting (which most of you are doing at this point).
+* Avoid language about hypothesis testing; just state the result and give the p-value.
+* Remember to clean things up -- remove any extra text or code, make all code and unformatted R output invisible
+* Be sure to reference and describe what you find from each table or figure you include in the report
+* Variable names in displays and tables should be nicely "human readable" -- no concatenations of the variable name and level
+* Your model results should not include the intercept and should be on the odds ratio (exponentiated) scale
+* For comparing the weighted and unweighted results, some indication of agreement or disagreement in statistical significance should be included, either with a p-value or a CI
+* When you present results for categorical variables, whether in a visualization or a model output, be sure it is clear to the reader what the baseline level is.
+
+
+## Assignment 2.4 (final project for Module 2)
+
+Write a complete report investigating the questions of interest from this module. Your report should include:
+
+* Some simple/concise background on the data set and a clear presentation of the question you want to answer;
+* An exploratory data analysis, where you use data visualizations (tables and figures) to illustrate relationships between variables in the data set, as they relate to the question you are interested in answering, and then discuss what these visualizations tell you;
+* A model selection process. Think about justifying each choice of variable in your model: can you use a visualization to do this? Look at significance of coefficients? Talk about how you are curious about a specific variable and how it influences hypertension? Assess the contribution of a particular variable using the `regTermTest` function? Compare models using AIC to decide on your final model?
+* Model results presented in a tidy way, perhaps with a nice table of relevant coefficients and p-values, including a clear discussion of the effects of the variables included in the model;
+* A comparison of results from the survey-weighted model to those from a standard glm, and a brief discussion of what you see. What is an effective way of illustrating how the results of the weighted and unweighted approaches compare?
+
+Finally, try to make your report as readable as possible: hide any R code or warning messages, try to make the tables readable, etc. 
+
+* Submit your updated analysis report in R Markdown through Github by Monday March 24, 2025 at midnight.
+* Post a screenshot of some aspect of your final project that you think is particularly interesting on Piazza in the "Assignment 2-4 Results" thread.  Add a sentence or two about what you can conclude based on your analysis. You are welcome to post this anonymously to your classmates. You can also include comments about what your chose to do or questions you had as you were making the display and fitting your model.
+* You may work together on this assignment, but you must submit your own report; please credit in your assignment anyone with whom you collaborated.
+* There is no class next week due to spring break; in class two weeks from now we will continue with discussion of your final project ideas.
+
