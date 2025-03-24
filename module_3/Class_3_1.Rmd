@@ -29,6 +29,7 @@ The goal of the rest of the course is to provide you with the support you need t
 We will be interacting with each other on these project topics: supporting each other through feedback and knowledge sharing.
 
 There will be didactic components so support your learning:
+
 * More advanced modeling topics such as Poisson regression, survivial analysis and Cox proportional-hazards models, etc.
 * More advanced data presentation topics such as data dashboards (interactive and static), enhanced R-markdown reports
 * Whatever other holes you feel you have in your statistical/data science knowledge that you think will come in handy (totally open to suggestions!)
