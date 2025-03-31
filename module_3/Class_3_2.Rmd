@@ -1,5 +1,5 @@
 ---
-title: "Class 3-1: Getting started with your projects!"
+title: "Class 3-2: Getting started with your projects!"
 author: "Health Data Analysis Practicum (AS.280.347)"
 date: "3/31/2025"
 output: 
