@@ -49,6 +49,7 @@ Your final project will have the following pieces:
     * Make suggestions for improvement!
 
 Some recurring themes:
+
 * Reading in data from different formats (see [this link to one of the open case studies](https://www.opencasestudies.org/ocs-bp-RTC-wrangling/#Right-to-carry_laws){target="_blank"} for an example with pdf file)
 * Merging data from different data sets (see [this link](https://www.opencasestudies.org/ocs-bp-opioid-rural-urban/#Rural_and_Urban_Counties){target="_blank"} for an illustration of the different kinds of join functions)
 * Don't be afraid to start with tackling a simpler question -- you are all great public health students, but you are still building your analysis skills
