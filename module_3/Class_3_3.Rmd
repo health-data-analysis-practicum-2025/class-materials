@@ -1,0 +1,439 @@
+---
+title: "Module 3 Week 3: Continuing with your projects"
+author: "Health Data Analysis Practicum (AS.280.347)"
+date: "4/7/2025"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: false
+---
+
+```{r setup, include=FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(haven)
+library(knitr) 
+library(ggpubr)
+library(ggrepel)
+library(tidyverse)
+library(kableExtra)
+library(survey)
+library(broom)
+library(plotrix)
+library(patchwork)
+library(pander)
+# any other libraries you want to load
+```
+
+## Today's agenda
+
+* Present your ideas/work
+* Small lecture on missing data and reshaping data
+* Questions and work time
+
+
+
+### Class notes on tidy data
+
+See Content3-2_tidy_data.Rmd for examples of switching data from long to short form, and joining data sets with common columns.
+
+There is also a great animation about the different join functions in this [open case study](https://www.opencasestudies.org/ocs-bp-opioid-rural-urban/){target="_blank"}.
+
+
+## Your project design
+
+Your final project will have the following pieces:
+
+* Question of interest
+* Data set and design
+  * Outcome variable
+  * Predictor variable(s) of primary interest
+  * Potential confounders
+  * Potential effect modifiers
+* Directed acyclic graph (DAG) showing the hypothesized relationships of interest and including potential confounders and effect modifiers
+* A primary analysis to address the question of interest
+* Communication of results in tables and figures
+
+## When presenting your work
+
+* Discuss your analysis idea (what's your question?)
+* Discuss problems you ran into (and solutions if you have them!)
+* Describe
+    * Your data
+    * Your data cleaning process
+    * Results of your exploratory data analysis
+    * The two or three next things you are going to do to move forward on your project
+* To provide feedback
+    * Ask questions
+    * Make suggestions for improvement!
+
+Some recurring themes:
+* Reading in data from different formats (see [this link to one of the open case studies](https://www.opencasestudies.org/ocs-bp-RTC-wrangling/#Right-to-carry_laws){target="_blank"} for an example with pdf file)
+* Merging data from different data sets (see [this link](https://www.opencasestudies.org/ocs-bp-opioid-rural-urban/#Rural_and_Urban_Counties){target="_blank"} for an illustration of the different kinds of join functions)
+* Don't be afraid to start with tackling a simpler question -- you are all great public health students, but you are still building your analysis skills
+* Think about what the unit of observation is: individual, county, state. This will inform how you collect your data and perform your analyses.
+
+
+## Working project document
+
+We have created a working [working Google doc](https://docs.google.com/document/d/14dz0CLhY9J6G-G-gQF8VPvg4xDIhZ4xWyHV9o1VQRW8/edit?usp=sharing){target="_blank"} where you can record your plans. This will help you organize your thoughts, find classmates working on similar questions, and help us keep track of who is working on what. Please keep this document updated as your project changes!
+
+Before Wednesday, I will review what you have submitted and plan to push detailed feedback and/or be sure to connect with you in class on Wednesday to go over next steps.
+
+
+## Working with missing data
+
+This is based on the data set one of you is working with in your project. 
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is a publicly available dataset collected from annual health-related telephone surveys in the US. Their data encompasses demographic, socioeconomic, and a variety of health-related risk behaviors and conditions information. It contains detailed questions on cancer screening behavior, including breast/cervical, colorectal, and prostate cancer. Here is the link to the [BRFSS Survey Data and Documentation](https://www.cdc.gov/brfss/annual_data/annual_2022.html){target="_blank"}.
+
+What factors are associated with being up-to-date on recommended colorectal cancer screening in the DMV region (Maryland, Virginia, and Washington DC)?
+I wanted to do something related to cancer prevention/early intervention, and this dataset has a lot of information about different types of cancer screening, so I thought I'd explore it here.
+
+Concern about missing data: what is causing so much data loss?
+
+```{r}
+dat_DMV <- read_xpt('module_3/data/dat_DMV.xpt')
+
+
+dat <- 
+  dat_DMV %>% 
+    select(
+      age_cat = `_AGE_G`,
+           race = `_RACE1`,
+           sex = `_SEX`,
+           insurance = PRIMINSR,
+           pcp = PERSDOC3, #need to add factor names
+           education = `_EDUCAG`,
+           income = `_INCOMG1`,
+           smoking = `_RFSMOK3`,
+           bmi = `_BMI5`,
+           mh_cont = MENTHLTH,
+           mh_cat = `_MENT14D`,
+           colonoscopy = COLNTES1,
+           stool = STOLTEST,
+           surveyweight = `_LLCPWT`) 
+
+
+summary(dat)
+glimpse(dat)
+
+dat %>%
+  filter(
+    !is.na(sex), sex %in% c(1, 2),
+    !is.na(race), race %in% c(1,2,3,4,5,7,8),
+    !is.na(age_cat), age_cat %in% 1:6,
+    !is.na(income), income %in% 1:7,
+    !is.na(education), education %in% 1:4,
+    !is.na(smoking), smoking %in% c(1, 2),
+    !is.na(bmi),
+    !is.na(insurance), insurance %in% c(1,2,3,4,5,6,7,8,9,10,88),
+    !is.na(pcp), pcp %in% 1:3,
+    !is.na(mh_cont), mh_cont %in% 1:88,
+    !is.na(mh_cat), mh_cat %in% 1:3,
+    !is.na(colonoscopy), colonoscopy %in% 1:7,
+    !is.na(stool), stool %in% 1:7,
+  ) %>%
+  mutate(insurance = case_when(
+        insurance %in% c(1, 2) ~ insurance,       # keep 1 and 2 as-is
+        insurance %in% 3:5 ~ 3,                   # combine 3-5 as 3
+        insurance %in% 6:10 ~ 4,                  # combine 6-10 as 4
+        insurance %in% c(77, 88) ~ 5              # combine 77 and 88 as 5
+      ))
+
+
+dat <- dat %>% 
+  mutate(age_cat = factor(age_cat,
+                          levels = c(1, 2, 3, 4, 5, 6),
+                          labels = c('18-24', '25-34', '35-44', '45-54',
+                                     '55-64', '65+')),
+         race = factor(race, 
+                       levels = c(1, 2, 3, 4, 5, 7, 8), 
+                       labels = c('White', 'Black/African American', 
+                                  'Indian /Alaska Native', 
+                                  'Asian', 
+                                  'Pacific Islander', 'Multiracial', 'Hispanic')),
+         sex = factor(sex, 
+                      levels = c(1, 2), 
+                      labels = c('Male', 'Female')),
+         insurance = case_when(
+           insurance %in% c(1, 2) ~ insurance,       # keep 1 and 2 as-is
+           insurance %in% 3:5 ~ 3,                   # combine 3-5 as 3
+           insurance %in% 6:10 ~ 4,                  # combine 6-10 as 4
+           insurance %in% c(77, 88) ~ 5              # combine 77 and 88 as 5
+         ),
+         insurance = factor(insurance,
+                            levels = c(1, 2, 3, 4, 5),
+                            labels = c('Employer-sponsored','Private', 'Medicare/Medicaid',
+                                       'Other types', 'No insurance')),
+         income = factor(income, 
+                         levels = c(1:7), 
+                         labels = c('Less than $15,000','$15,000 - $25,000',
+                                    '$25,000 - $35,000','$35,000 - $50,000',
+                                    '$50,000 - $100,000','$100,000 - $200,000', 
+                                    '$200,000 or more')), 
+         education = factor(education,
+                            levels = c(1, 2, 3, 4),
+                            labels = c('<High School','High School', 'Attended College',
+                                       'Graduated College')),
+         smoking = factor(smoking, 
+                          levels=c(2, 1), 
+                          labels = c('Current smoker','Nonsmokers')),
+         mh_cat = factor(mh_cat, 
+                         levels = c(1, 2, 3), 
+                         labels = c('0 Unwell days','1-13 Unwell days', '14+ Unwell days')),
+         CRC_uptodate = if_else(colonoscopy %in% c(1, 2) | stool == 1, 1, 0),
+         CRC_uptodate = factor(CRC_uptodate, levels = c(0, 1),
+                               labels = c('not up-to-date', 'up-to-date'))
+  )
+
+
+summary(dat)
+
+```
+
+General strategy: look at the codebook, recode variables before removing missing values so you can then see which variables have the most missing values (and then circle back to the codebook).
+
+## Reshaping data
+
+This is some complex wrangling of data from a pdf file we won't go through it in detail, but take a look if you are interested!
+
+```{r mmrdata, include=FALSE}
+library(pdftools)
+
+pdf <- pdf_text("module_3/data/mmr-2018-2022-state-data.pdf")
+
+mmrdata <- pdf %>%
+    str_split("\n") %>%
+    unlist() %>%
+    dplyr::as_tibble() %>%
+    slice(-(1:5)) %>%
+    slice(-(42)) %>%
+    slice(-(53:69))
+
+mmrdata %>%
+  mutate(value = map_chr(value, str_length)) %>%tail()
+
+mmrdata %>% pull(value) %>% map(str_split, pattern = " ") %>% first()
+
+mmrdata %>% 
+  pull(value) %>%
+  map(str_count, pattern = "\\s{40,}") %>% 
+  unlist()
+
+mmrdata <-mmrdata %>%
+  mutate(value = str_replace_all(pull(., value), "\\s{40,}", "|N/A|")) %>%
+  mutate(value =str_trim(pull(., value), side = "left")) %>%
+  mutate(value = str_replace_all(pull(., value), "\\s{2,15}", "|"))
+
+mmrdata <-pull(mmrdata, value) %>%
+  str_split( "\\|{1,}") 
+
+mmrtibble <- as.tibble(do.call(rbind, mmrdata))
+
+mmrtibble[mmrtibble == "*"] <- NA
+
+colnames(mmrtibble) <- c("State",
+                    "Number of Births",
+                    "Number of Deaths",
+                    "MMR",
+                    "95% Lower Confidence Limit",
+                    "95% Upper Confidence Limit")
+
+mmrtibble$"Number of Births" <- as.numeric(gsub(",","",mmrtibble$"Number of Births"))
+mmrtibble$"Number of Deaths" <- as.numeric(gsub(",","",mmrtibble$"Number of Deaths"))
+mmrtibble$"MMR" = as.numeric(mmrtibble$"MMR")
+mmrtibble$"95% Lower Confidence Limit" = as.numeric(mmrtibble$"95% Lower Confidence Limit")
+mmrtibble$"95% Upper Confidence Limit" = as.numeric(mmrtibble$"95% Upper Confidence Limit")
+
+```
+
+```{r insurancedata, include=FALSE}
+insurancedata <- read_csv('module_3/data/insurancedata.csv')
+
+insurancetibble <- select(insurancedata, "State", "RestrictIns")
+
+insurancetibble <- insurancetibble %>% 
+  slice(-(3:4)) %>%
+  slice(-11) %>%
+  slice(-15) %>%
+  slice(-21) %>%
+  slice(-27) %>%
+  slice(-36) %>%
+  slice(-40) %>%
+  slice(-42) %>%
+  slice(-45) %>%
+  slice(-(47:48))
+
+insurancetibble <- insurancetibble %>%
+    mutate(RestrictIns = factor(RestrictIns, levels = c("0", "1"), labels = c("No", "Yes")))
+
+colnames(insurancetibble) <- c("State",
+                    "Insurance Restrictions on Abortion")
+
+```
+
+```{r povertydata, include=FALSE}
+povertydata <- read_csv('module_3/data/povertydata.csv')
+
+povertytibble <- select(povertydata, "Location", "Female")
+colnames(povertytibble) <- c("State",
+                    "Poverty Rate for Females")
+```
+
+```{r agesexracedata, include=FALSE}
+agesexracedata <- read_csv('module_3/data/agesexracedata.csv')
+
+agesexracetibble <- select(agesexracedata, "NAME", "SEX", "ORIGIN", "RACE", "AGE", "POPESTIMATE2022")
+
+agesexracetibble <- agesexracetibble %>%
+    mutate(SEX = factor(SEX, levels = c("0", "1", "2"), labels = c("Total", "Male", "Female")),
+          ORIGIN = factor(ORIGIN, levels = c("0", "1", "2"), labels = c("Total", "Not Hispanic", "Hispanic")),
+          RACE = factor(RACE, levels = c("1", "2", "3", "4", "5", "6"), labels = c("White", "Black/African American", "American Indian or Alaska Native", "Asian", "Native Hawaiian and Other Pacific Islander", "Two or more races")))
+
+# colnames(agesexracetibble) <- c("State",
+#                     "Sex",
+#                     "Hispanic Origin",
+#                     "Race",
+#                     "Age",
+#                     "Population Estimate (2022)")
+
+```
+
+```{r joining data, include=FALSE}
+povertyinsurance <- 
+  full_join(x = insurancetibble, y = povertytibble, by = "State")
+
+mmrpovins <-
+  full_join(x = povertyinsurance, y = mmrtibble, by = "State")
+
+my_table <- agesexracetibble %>%
+ filter(SEX == "Female")
+  
+# group_by(NAME, ORIGIN, RACE)
+
+my_table <- my_table %>% 
+  mutate(ageCat = cut(
+    AGE, 
+    breaks = c(0, 17, 24, 30, 36, 42, 48, 54, 60, Inf),
+    labels = c("0-17", "18-24", "25-30", "31-36", "37-42", "43-48", "49-54", "55-60", "61+")
+  ))
+
+```
+
+The student asked about creating summaries by state
+
+```{r summarizing data, include = FALSE}
+## here are some example summaries that might be useful!
+
+my_table %>% 
+  group_by(NAME, SEX, ORIGIN, RACE, ageCat) %>% 
+  summarize(totalpop = sum(POPESTIMATE2022))
+
+my_table %>% 
+  group_by(NAME, SEX, ORIGIN, RACE, ageCat) %>% 
+  summarize(totalpop = sum(POPESTIMATE2022))
+
+my_table %>% 
+  group_by(NAME, RACE) %>% 
+  summarize(total_by_race = sum(POPESTIMATE2022)) %>%
+  mutate(pct_by_race = total_by_race/sum(total_by_race))
+  
+
+
+# my_table <- nmes_data %>%
+#   count(poor, female, mscd, eversmk) %>%
+#   group_by(poor, female, eversmk) %>%
+#   mutate(prop = n/sum(n))
+
+```
+
+
+
+
+## Assignment 3.3
+
+* Use "Copy to" to create a new version of your final project Rmd file, with a new date: for this week it should be **Final_Project_Draft_2025_04_13.Rmd**
+* Write a short introduction to your question of interest:
+    * Question
+    * Data source
+    * Outcome variable
+    * Primary predictor variable(s)
+* **Add your data to your Github project** and read your data into RStudio Cloud
+    * Many of you have not done this yet, which means I can't knit your files or provide detailed feedback
+* Examine and explore your data:
+    * How do you decide what variables to include in your data set?
+    * Summaries of your variables of interest
+        * Is there missing data?  Anything unusual or concerning?
+    * Recode from numbers to factors
+        * 1 -> "poor"", 0 -> "not poor", etc
+    * Make a few basic exploratory plots to answer your question
+* What type of regression analysis could you use to address your question?
+
+As we have with all assignments in the past:
+
+* Submit your assignment in R markdown through Github **by Sunday (April 13, 2025) at midnight**.  
+* Share some information about your work so far on Piazza in the "Final Project Week 3" thread. This could be a **screenshot of a figure or table**, **some interpretation**, **a question** about how to do something, or **a problem** you would like help with. You are welcome to post this anonymously to your classmates, but remember that your project topic may be unique and so it may be hard to remain anonymous in these posts. 
+* In your Piazza post, **give a little background on your project** (question of interest, variables, etc) so that classmates have a context with which to look at your post.
+
+
+## Important dates for final project
+
+Below you can find important dates for this final project.  **Each of you will work at your own pace through this project**, so the items listed for each week are suggested benchmarks to keep you on track for these last 5 weeks of class.  
+
+**Each week you will submit your current work in R markdown through Github by Sunday at midnight.**  This includes your .Rmd file and either your dataset or your knit .html file if you are not sharing your data on the cloud.  **Each week you will also make a post on Piazza sharing something about your work in progress.**
+
+When you submit your work each week, include specific questions you have or places where you are stuck.  Be prepared to present (talk about) your work in class on the following Monday.
+
+**If you are struggling with any part of the project or want to talk through your code please come to office hours or reach out to us over email.**
+
+* **Week of March 24:**
+    * Identification of a question of interest and appropriate data set for answering the question.  
+    * Set up Github repository with data; read data into RStudio in Posit cloud
+    * Initial summaries, recoding, and possibly exploratory plots of the variables in your dataset
+    * Submit your work (and questions for us) through Github and post on Piazza Week 1 thread by Sunday (3/30) at midnight; be prepared to discuss your work in class on Monday (3/31)
+* **Week of March 31:**
+    * Finish recoding and cleaning of your data
+    * Finish exploratory analysis of your variables
+    * Create a rough initial data display (figure/table) that addresses your question of interest
+    * Submit your work (and questions for us) through Github and post on Piazza Week 2 thread by Sunday (4/6) at midnight; be prepared to discuss your work in class on Monday (4/6)
+* **Week of April 7:**
+    * Finalize your data display to answer your question of interest
+    * Create some initial regression models that answer your question of interest
+    * Submit your work (and questions for us) through Github and post on Piazza Week 3 thread by Sunday (4/13) at midnight; be prepared to discuss your work in class on Monday (4/14)
+* **Week of April 14:**
+    * Finalize your regression models for answering your question of interest
+    * Begin writing up your interpretation of your results for your final project report
+    * Submit your work (and questions for us) through Github by Sunday (4/20) at midnight
+* **Week of April 21:**
+    * Create a presentation (~ 4 slides, see below) to present your work to the class
+    * Continue writing up your interpretation of your results for your final project report. 
+    * Possible extension: Create a data dashboard, interactive Shiny or Rmd interface (for example with tabs)
+    * Submit your work (and questions for us) through Github by Sunday (4/27) at midnight
+    * Submit your presentation slides through Github by Sunday (4/27) at midnight and be prepared to give your presentation in class on Monday (4/28)
+* **April 28 (Monday): Class presentations**
+    * Each person will present their results to the class.  You should present your results as far as they are at that time.
+    * You will have 5 minutes to talk about your project.  
+    * You should prepare ~ 4 slides to aid in your presentation:
+        * Slide 1 will have your question, information about your data set, and your design (outcome, predictors, confounders, etc)
+        * Slide 2 should have a DAG showing your proposed relationship with confounders/modifiers included
+        * Slide 3 should show a data display that addresses your question of interest
+        * Slide 4 should show the results of a statistical analysis to answer your question
+        * You should submit these slides Sunday night through your project Github repository before coming to class; label the PPT file with your last name
+* **May 8 (Thursday): Final report due**
+    * Your written report for your project is due at midnight through Github.
+    * Include an introduction section to give some context for why your question is interesting.
+    * Include a brief description of the data and variables you used for your project.
+    * Include a directed acyclic graph (DAG) that shows how you think your variables relate to each other.  Note: You do not need to try to make this DAG in R.  Make it in Powerpoint and then take a screen shot.  You can then upload the image file to RStudio cloud and insert it into your R Markdown document like [this](https://www.earthdatascience.org/courses/earth-analytics/document-your-science/add-images-to-rmarkdown-report/). 
+    * For each question of interest, you should have a data display and a statistical analysis to address the question.  
+    * For each question of interest, give a few brief sentences to describe the methods (regression techniques) you used to answer the question.
+    * Write up your results in a few paragraphs to answer your questions.  In your write-up, you should refer to your data display(s) and your analysis results.  Be numerate!
+    * You will submit a .Rmd file that will knit into the final report that you are submitting, i.e., all code is provided and runnable to produce the report.
+
