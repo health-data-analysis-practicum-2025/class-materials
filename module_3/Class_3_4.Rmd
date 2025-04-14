@@ -74,7 +74,7 @@ Example powerpoint presentation generation from R!
 
 ### Graphics discussion
 
-```{r libraries2, include=FALSE}
+```{r libraries2, include=FALSE, eval = FALSE}
 library(haven)
 library(tidyr)
 library(dplyr)
@@ -88,7 +88,7 @@ library(kableExtra)
 library(broom)
 ```
 
-```{r Read & clean pm_data, echo=FALSE}
+```{r Read & clean pm_data, echo=FALSE, eval = FALSE}
 states <- us_map(regions = "states")
 
 pm_data <- read.csv('./module_3/data/HDPulse_data_export.csv', sep=";")
@@ -109,12 +109,12 @@ states$`PM 2.5` <- as.double(states$`PM 2.5`)
 ```
 
 
-```{r Read BRFSS data, echo=FALSE}
+```{r Read BRFSS data, echo=FALSE, eval = FALSE}
 brfss <- read.csv('./module_3/data/main_data.csv')
 ```
 
 
-```{r Clean BRFSS data, echo=FALSE}
+```{r Clean BRFSS data, echo=FALSE, eval = FALSE}
 brfss <- brfss %>%
   mutate(
     state = factor(state, 
@@ -195,7 +195,7 @@ brfss <- brfss %>%
 ```
 
 
-```{r Create pm_cat column, echo=FALSE}
+```{r Create pm_cat column, echo=FALSE, eval = FALSE}
 # join brfss data with PM 2.5 data
 join_pm_brfss <- brfss %>%
   left_join(pm_data, by = c("state"="State"))
@@ -213,7 +213,7 @@ join_pm_brfss <- join_pm_brfss %>%
 ```
 
 
-```{r Exploratory Research: Chloropleth map of US State by PM 2.5, echo=FALSE }
+```{r Exploratory Research: Chloropleth map of US State by PM 2.5, echo=FALSE , eval = FALSE}
 ggplot(states) +
   geom_sf(aes(fill=`PM 2.5`), lwd = 0.1, color="white") + 
   scale_fill_viridis_c(direction = -1) +
@@ -223,7 +223,7 @@ ggplot(states) +
   )
 ```
 
-```{r Exploratory Research: PM 2.5 percentage with each state, echo=FALSE}
+```{r Exploratory Research: PM 2.5 percentage with each state, echo=FALSE, eval = FALSE}
 ggplot(data = join_pm_brfss, aes(x=state, y=`PM 2.5`, color = pm_cat)) +
   geom_point(stat="identity") +
   labs(
@@ -237,7 +237,7 @@ ggplot(data = join_pm_brfss, aes(x=state, y=`PM 2.5`, color = pm_cat)) +
 ```
 
 
-```{r Exploratory Research: Asthma percentage with each state, echo=FALSE}
+```{r Exploratory Research: Asthma percentage with each state, echo=FALSE, eval = FALSE}
 
 low_pm_states <- join_pm_brfss %>%
   filter(pm_cat == "Low")
@@ -269,7 +269,7 @@ ggplot(data = low_pm_states) +
 
 ```
 
-```{r alternative plot}
+```{r alternative plot, eval = FALSE}
 join_pm_brfss %>%
   group_by(state) %>% 
   mutate(asthma_pct = sum(asthma == "Ever")/n()) %>%
