@@ -346,6 +346,13 @@ my_table %>%
   summarize(total_by_race = sum(POPESTIMATE2022)) %>%
   mutate(pct_by_race = total_by_race/sum(total_by_race))
   
+my_table %>% 
+  group_by(NAME, RACE) %>% 
+  summarize(total_by_race = sum(POPESTIMATE2022)) %>%
+  mutate(pct_by_race = total_by_race/sum(total_by_race)) %>%
+  select(NAME, RACE, pct_by_race) %>%
+  pivot_wider(names_from = RACE, values_from = pct_by_race)
+
 
 
 # my_table <- nmes_data %>%
